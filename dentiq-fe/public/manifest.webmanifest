@@ -1,0 +1,18 @@
+{
+  "name": "Dentiq · Gagneja Dental Clinic",
+  "short_name": "Dentiq",
+  "description": "Patients, visits, appointments and payments for Gagneja Dental Clinic",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0d9488",
+  "background_color": "#eef3f2",
+  "categories": ["medical", "productivity"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

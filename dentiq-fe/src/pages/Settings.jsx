@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Plus, X, LogOut, Zap, MessageCircle, Moon, Sun } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Plus, X, LogOut, Zap, MessageCircle, Moon, Sun, Download, Share } from 'lucide-react'
 import { useStore } from '../data/store'
 import { inputCls, Label } from '../components/Sheet'
 
@@ -31,6 +31,40 @@ function ChipList({ items, onChange, placeholder }) {
         <button onClick={add} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-bg hover:bg-teal-50 hover:text-teal-700"><Plus size={18} /></button>
       </div>
     </div>
+  )
+}
+
+function InstallApp() {
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
+  const [prompt, setPrompt] = useState(() => window.__installPrompt)
+  const [installed, setInstalled] = useState(standalone)
+  useEffect(() => {
+    const ready = () => setPrompt(window.__installPrompt)
+    const done = () => setInstalled(true)
+    addEventListener('installable', ready)
+    addEventListener('appinstalled', done)
+    return () => { removeEventListener('installable', ready); removeEventListener('appinstalled', done) }
+  }, [])
+
+  const install = async () => {
+    prompt.prompt()
+    const { outcome } = await prompt.userChoice
+    if (outcome === 'accepted') setInstalled(true)
+    window.__installPrompt = null
+    setPrompt(null)
+  }
+
+  if (installed) return <p className="mb-4 text-sm text-muted">✓ Dentiq is installed on this device.</p>
+  if (prompt) return (
+    <button onClick={install} className="mb-4 flex h-11 items-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-bold text-white shadow-lg shadow-teal-600/25 hover:bg-teal-700">
+      <Download size={16} /> Install Dentiq
+    </button>
+  )
+  return (
+    <p className="mb-4 flex items-start gap-2 text-sm text-muted">
+      {ios ? <><Share size={16} className="mt-0.5 shrink-0" /> To install: tap Share, then “Add to Home Screen”.</> : <><Download size={16} className="mt-0.5 shrink-0" /> To install: open the browser menu and choose “Install Dentiq” or “Add to Home screen”.</>}
+    </p>
   )
 }
 
@@ -131,6 +165,7 @@ export default function Settings({ dark, toggleDark }) {
       </Section>
 
       <Section title="App" delay={140}>
+        <InstallApp />
         <Toggle on={dark} onChange={toggleDark} label={<span className="flex items-center gap-2">{dark ? <Moon size={16} /> : <Sun size={16} />} Dark mode</span>} />
         <button onClick={logout} className="mt-4 flex items-center gap-2 text-sm font-bold text-rose-600 dark:text-rose-300"><LogOut size={16} /> Log out</button>
       </Section>
