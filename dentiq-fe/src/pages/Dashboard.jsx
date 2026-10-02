@@ -137,11 +137,8 @@ export default function Dashboard({ onNewVisit, onNewPatient }) {
       <section className="min-w-0 space-y-6">
         <div className="rise">
           <h1 className="text-2xl font-medium md:text-3xl">{greeting()}, <span className="font-extrabold">{settings?.doctorName}</span></h1>
-          <p className="mt-1 flex items-center gap-2 text-sm text-muted">
+          <p className="mt-1 text-sm text-muted">
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}{!hidden && ` · ${queue.length - done} patients left today`}
-            <button onClick={toggleHidden} aria-pressed={hidden} title={hidden ? 'Show numbers' : 'Hide numbers'} className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-card text-muted hover:text-ink">
-              {hidden ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
           </p>
         </div>
 
@@ -160,10 +157,18 @@ export default function Dashboard({ onNewVisit, onNewPatient }) {
           </button>
         </div>
 
-        <div className="rise grid grid-cols-3 gap-3 md:gap-4" style={{ animationDelay: '120ms' }}>
+        <div className="rise" style={{ animationDelay: '120ms' }}>
+        {/* Eye toggle sits right above the Dues pending tile */}
+        <div className="mb-2 flex justify-end">
+          <button onClick={toggleHidden} aria-pressed={hidden} title={hidden ? 'Show numbers' : 'Hide numbers'} className="flex h-8 items-center gap-1.5 rounded-lg border border-line bg-card px-2.5 text-xs font-semibold text-muted hover:text-ink">
+            {hidden ? <EyeOff size={15} /> : <Eye size={15} />} {hidden ? 'Show' : 'Hide'}
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-3 md:gap-4">
           <Stat icon={Users} value={`${done}/${queue.length}`} label="Seen today" hidden={hidden} tone="bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300" />
           <Stat icon={Wallet} value={rupees(collected)} label="Collected" hidden={hidden} tone="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" />
           <Stat icon={AlertCircle} value={rupees(dues)} label="Dues pending" hidden={hidden} tone="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" />
+        </div>
         </div>
 
         {/* On mobile the queue sits here; on wide screens it moves to the right column */}

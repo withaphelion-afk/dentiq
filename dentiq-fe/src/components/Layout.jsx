@@ -11,38 +11,36 @@ export const NAV = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
-const TOOTH = 'M20 14c-6 0-9 5-9 11 0 7 3 10 5 17 1 5 2 9 5 9s3-5 4-10c1-3 2-5 7-5s6 2 7 5c1 5 1 10 4 10s4-4 5-9c2-7 5-10 5-17 0-6-3-11-9-11-5 0-7 3-12 3s-7-3-12-3z'
-
-// Brand mark: jewel-toned badge, glossy enamel tooth with a smile, gold sparkle
+// Brand mark: black badge, enamel crown on a threaded titanium implant, sparkle
 export function Logo({ className = 'h-9 w-9' }) {
   const id = useId().replace(/:/g, '')
   return (
-    <svg viewBox="0 0 64 64" className={`shrink-0 drop-shadow-[0_6px_14px_rgba(13,148,136,0.35)] ${className}`} role="img" aria-label="Dentiq">
+    <svg viewBox="0 0 64 64" className={`shrink-0 drop-shadow-[0_6px_14px_rgba(0,0,0,0.28)] ${className}`} role="img" aria-label="Dentiq">
       <defs>
-        <linearGradient id={`${id}bg`} x1="6" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#2dd4bf" /><stop offset=".45" stopColor="#0d9488" /><stop offset="1" stopColor="#134e4a" />
+        <linearGradient id={`${id}bg`} x1="8" y1="2" x2="56" y2="62" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#3a3a3a" /><stop offset=".5" stopColor="#121212" /><stop offset="1" stopColor="#000000" />
         </linearGradient>
-        <linearGradient id={`${id}en`} x1="20" y1="16" x2="44" y2="48" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#ffffff" /><stop offset=".6" stopColor="#f0fdfa" /><stop offset="1" stopColor="#99f6e4" />
-        </linearGradient>
-        <linearGradient id={`${id}au`} x1="44" y1="8" x2="54" y2="20" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fef3c7" /><stop offset="1" stopColor="#f59e0b" />
-        </linearGradient>
-        <radialGradient id={`${id}gl`} cx="22" cy="10" r="30" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fff" stopOpacity=".45" /><stop offset="1" stopColor="#fff" stopOpacity="0" />
+        <radialGradient id={`${id}gl`} cx="20" cy="6" r="36" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#ffffff" stopOpacity=".28" /><stop offset="1" stopColor="#ffffff" stopOpacity="0" />
         </radialGradient>
+        <linearGradient id={`${id}en`} x1="0" y1="9" x2="0" y2="34" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#ffffff" /><stop offset=".7" stopColor="#f1f1f1" /><stop offset="1" stopColor="#cfcfcf" />
+        </linearGradient>
+        <linearGradient id={`${id}ti`} x1="23" y1="0" x2="41" y2="0" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#7a7a7a" /><stop offset=".4" stopColor="#f2f2f2" /><stop offset=".62" stopColor="#b8b8b8" /><stop offset="1" stopColor="#555555" />
+        </linearGradient>
       </defs>
       <rect width="64" height="64" rx="18" fill={`url(#${id}bg)`} />
       <rect width="64" height="64" rx="18" fill={`url(#${id}gl)`} />
-      <rect x="1" y="1" width="62" height="62" rx="17" fill="none" stroke="#fff" strokeOpacity=".22" strokeWidth="1.5" />
-      <g transform="translate(9.6 10.4) scale(.7)">
-        <path d={TOOTH} fill="#042f2e" opacity=".28" transform="translate(1.5 3)" />
-        <path d={TOOTH} fill={`url(#${id}en)`} />
-        <path d="M22 18c-3.5.6-5.4 3.4-5.6 7" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" opacity=".9" />
-        <path d="M23 30c3 4.2 6.2 6 9 6s6-1.8 9-6" fill="none" stroke="#0d9488" strokeWidth="3.4" strokeLinecap="round" />
-      </g>
-      <path d="M49 7.5l1.6 4.4 4.4 1.6-4.4 1.6L49 19.5l-1.6-4.4-4.4-1.6 4.4-1.6z" fill={`url(#${id}au)`} />
-      <circle cx="55.5" cy="22" r="1.4" fill="#fde68a" />
+      <rect x=".75" y=".75" width="62.5" height="62.5" rx="17.25" fill="none" stroke="#ffffff" strokeOpacity=".16" strokeWidth="1.5" />
+      <path d="M25,37 L23.8,38.8 L25.3,40.5 L24.1,42.3 L25.7,44 L24.6,45.8 L26.1,47.5 L25.1,49.3 L26.6,51 L25.7,52.8 L27.5,54.5 Q32,58.5 36.5,54.5 L38.3,52.8 L37.4,51 L38.9,49.3 L37.9,47.5 L39.4,45.8 L38.3,44 L39.9,42.3 L38.7,40.5 L40.2,38.8 L39,37 Z" fill={`url(#${id}ti)`} stroke="#1a1a1a" strokeWidth=".5" />
+      <g stroke="#3a3a3a" strokeWidth=".7" strokeLinecap="round" opacity=".7"><line x1="26.4" y1="39.2" x2="37.6" y2="40.7" /><line x1="26.4" y1="42.7" x2="37.6" y2="44.2" /><line x1="26.4" y1="46.2" x2="37.6" y2="47.7" /><line x1="26.4" y1="49.7" x2="37.6" y2="51.2" /><line x1="26.4" y1="53" x2="37.6" y2="54.5" /></g>
+      <rect x="26.5" y="33" width="11" height="4.6" rx="1.2" fill={`url(#${id}ti)`} />
+      <path d="M17 20.6C17 12.4 21 9 24.8 9.8c2.4.5 4.4 2.6 7.2 2.6s4.8-2.1 7.2-2.6C43 9 47 12.4 47 20.6l-.9 8.6c-.4 3.2-3.4 4.6-14.1 4.6s-13.7-1.4-14.1-4.6z" fill={`url(#${id}en)`} />
+      <path d="M20.2 15.6c.6-2.4 2-3.6 3.6-3.4" fill="none" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M28 14.6q4 3 8 0" fill="none" stroke="#9e9e9e" strokeWidth=".9" strokeLinecap="round" />
+      <path d="M50.5 7.5l1.3 3.6 3.6 1.3-3.6 1.3-1.3 3.6-1.3-3.6-3.6-1.3 3.6-1.3z" fill="#ffffff" />
+      <circle cx="55.5" cy="20" r="1.1" fill="#ffffff" opacity=".7" />
     </svg>
   )
 }

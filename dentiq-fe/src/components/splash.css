@@ -1,0 +1,63 @@
+/* Startup implant animation (see Splash.jsx). Monochrome; colours flip in dark mode. */
+.splash {
+  --splash-bg1: #ffffff; --splash-bg2: #ececec; --splash-ink: #0a0a0a; --splash-sub: #6b6b6b;
+  --sp-line: #0a0a0a; --sp-bone: #efefef; --sp-pore: #d2d2d2; --sp-gum: #cfcfcf; --sp-tooth: #ffffff;
+  --sp-spark-a: #3d3d3d; --sp-spark-b: #000;
+  background: radial-gradient(120% 90% at 50% 40%, var(--splash-bg1), var(--splash-bg2));
+}
+.dark .splash {
+  --splash-bg1: #1a1a1a; --splash-bg2: #050505; --splash-ink: #f2f2f2; --splash-sub: #8c8c8c;
+  --sp-line: #f2f2f2; --sp-bone: #1d1d1d; --sp-pore: #2e2e2e; --sp-gum: #3a3a3a; --sp-tooth: #f2f2f2;
+  --sp-spark-a: #fff; --sp-spark-b: #9e9e9e;
+}
+
+.im-bone { fill: var(--sp-bone) }
+.im-pore { fill: var(--sp-pore) }
+.im-cortex { fill: none; stroke: var(--sp-line); stroke-width: 2.5; stroke-linecap: round; opacity: .55 }
+.im-tooth { fill: var(--sp-tooth); stroke: var(--sp-line); stroke-width: 2; stroke-linejoin: round }
+.im-gum { fill: var(--sp-gum); stroke: var(--sp-line); stroke-width: 1.5; stroke-opacity: .35 }
+.im-osteo { fill: none; stroke: var(--sp-line); stroke-width: 1.5; stroke-dasharray: .03 .02; opacity: 0 }
+.im-implant { stroke: #3d3d3d; stroke-width: 1 }
+.im-thread { stroke: #4a4a4a; stroke-width: 1.6; opacity: .6 }
+.im-handle { fill: var(--sp-line) }
+.im-ring { fill: none; stroke: var(--sp-line); stroke-width: 1.5; opacity: 0 }
+.im-abut { stroke: #3d3d3d; stroke-width: 1 }
+.im-crown-shape { stroke: var(--sp-line); stroke-width: 2; stroke-linejoin: round }
+.im-ray { fill: var(--sp-line) }
+
+/* Timeline (seconds): scene .0  site .25  implant .45–1.25  driver out 1.25  abutment 1.45  crown 1.75  shine 2.15  spark 2.35  logo 2.6 */
+.im-base { opacity: 0; transform: translateY(8px); animation: sp-in .45s ease-out forwards }
+.im-osteo { animation: im-site .4s ease-out .25s forwards }
+.im-drop { transform: translateY(-150px); opacity: 0; animation: im-drop .8s cubic-bezier(.22,.9,.3,1) .45s forwards }
+.im-threads { animation: im-spin .16s linear .45s 5 }
+.im-driver { animation: im-lift .35s ease-in 1.25s forwards }
+.im-ring { transform-box: fill-box; transform-origin: center; animation: im-ring .6s ease-out 1.3s forwards }
+.im-abut { opacity: 0; transform: translateY(-40px); animation: im-abut .3s cubic-bezier(.34,1.56,.64,1) 1.45s forwards }
+.im-crown { opacity: 0; transform: translateY(-70px); animation: im-crown .42s cubic-bezier(.34,1.4,.64,1) 1.75s forwards }
+.im-shine { animation: im-shine .45s ease-in-out 2.15s forwards }
+.im-spark { transform: scale(0) rotate(-45deg); animation: sp-spark .6s cubic-bezier(.34,1.56,.64,1) 2.35s forwards }
+.im-ray { opacity: 0; animation: sp-ray .55s ease-out 2.4s forwards }
+.sp-scene { animation: sp-settle .5s cubic-bezier(.65,0,.35,1) 2.6s forwards }
+.sp-brand { opacity: 0; transform: scale(.7); filter: blur(6px); animation: sp-brand .55s cubic-bezier(.2,.8,.2,1) 2.75s forwards }
+.sp-word, .sp-sub { opacity: 0; transform: translateY(8px); animation: sp-rise .45s ease-out 2.95s forwards }
+.sp-sub { animation-delay: 3.05s }
+
+@keyframes sp-in { to { opacity: 1; transform: none } }
+@keyframes im-site { to { opacity: .6 } }
+@keyframes im-drop { 0% { opacity: 0; transform: translateY(-150px) } 15% { opacity: 1 } 100% { opacity: 1; transform: none } }
+@keyframes im-spin { from { transform: translateY(0) } to { transform: translateY(9px) } }
+@keyframes im-lift { to { opacity: 0; transform: translateY(-70px) } }
+@keyframes im-ring { 0% { opacity: .5; transform: scale(.9) } 100% { opacity: 0; transform: scale(1.35) } }
+@keyframes im-abut { to { opacity: 1; transform: none } }
+@keyframes im-crown { to { opacity: 1; transform: none } }
+@keyframes im-shine { from { transform: translateX(0) } to { transform: translateX(150px) } }
+@keyframes sp-spark { 0% { transform: scale(0) rotate(-45deg) } 60% { transform: scale(1.25) rotate(10deg) } 100% { transform: scale(1) rotate(0) } }
+@keyframes sp-ray { 0% { opacity: 1; transform: rotate(var(--a)) translateX(6px) } 100% { opacity: 0; transform: rotate(var(--a)) translateX(26px) } }
+@keyframes sp-settle { to { opacity: 0; transform: scale(.42) translateY(-6px); filter: blur(3px) } }
+@keyframes sp-brand { to { opacity: 1; transform: none; filter: none } }
+@keyframes sp-rise { to { opacity: 1; transform: none } }
+
+@media (prefers-reduced-motion: reduce) {
+  .splash * { animation-duration: .01s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important }
+  .sp-scene { display: none }
+}

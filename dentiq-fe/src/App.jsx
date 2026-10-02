@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Splash from './components/Splash'
 import Layout from './components/Layout'
 import { DashboardSkeleton } from './components/Shimmer'
@@ -13,6 +13,7 @@ import NewVisit from './forms/NewVisit'
 import NewPatient from './forms/NewPatient'
 import BookAppointment from './forms/BookAppointment'
 import { useStore } from './data/store'
+import { justUpdated, startAutoUpdate } from './data/autoUpdate'
 import { rupees, fmtDay, fmtTime } from './data/format'
 
 const prefs = {
@@ -35,6 +36,12 @@ export default function App() {
     document.documentElement.classList.toggle('dark', dark)
     prefs.set('theme', dark ? 'dark' : 'light')
   }, [dark])
+
+  // Auto-update: only reload when no form is open and Settings (unsaved edits) isn't showing
+  const safe = useRef(true)
+  useEffect(() => { safe.current = !sheet && page !== 'settings' }, [sheet, page])
+  useEffect(() => startAutoUpdate(() => safe.current), [])
+  useEffect(() => { if (justUpdated()) flash('Dentiq updated to the latest version') }, [flash])
 
   const newVisit = (patient) => setSheet({ type: 'visit', patient })
   const newPatient = (prefill = '') => setSheet({ type: 'patient', prefill })

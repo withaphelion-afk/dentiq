@@ -8,27 +8,42 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --bg: #eef3f2;
+  --bg: #f4f4f4;
   --card: #ffffff;
-  --ink: #0f1f1d;
-  --muted: #6b7f7c;
-  --line: #e3ebe9;
-  --mint: #c9f0dc;
-  --lav: #dcd8fb;
-  --sh1: #e6eeec;
-  --sh2: #f6faf9;
+  --ink: #0a0a0a;
+  --muted: #6b6b6b;
+  --line: #e6e6e6;
+  --mint: #ebebeb;
+  --lav: #f7f7f7;
+  --sh1: #ececec;
+  --sh2: #f8f8f8;
+  /* Monochrome accent system: flips in dark mode */
+  --accent: #0a0a0a;
+  --accent-hover: #2b2b2b;
+  --on-accent: #ffffff;
+  --tint: #f0f0f0;
+  --tint-2: #e6e6e6;
+  --line-strong: #d4d4d4;
+  --mid: #9e9e9e;
 }
 
 .dark {
-  --bg: #0a1110;
-  --card: #121b1a;
-  --ink: #e8f1ef;
-  --muted: #8a9e9a;
-  --line: #1f2b29;
-  --mint: #173a2b;
-  --lav: #27264a;
-  --sh1: #17211f;
-  --sh2: #22302d;
+  --bg: #0a0a0a;
+  --card: #151515;
+  --ink: #f2f2f2;
+  --muted: #8c8c8c;
+  --line: #262626;
+  --mint: #1d1d1d;
+  --lav: #191919;
+  --sh1: #1a1a1a;
+  --sh2: #262626;
+  --accent: #f2f2f2;
+  --accent-hover: #d6d6d6;
+  --on-accent: #0a0a0a;
+  --tint: #1f1f1f;
+  --tint-2: #262626;
+  --line-strong: #3a3a3a;
+  --mid: #6e6e6e;
 }
 
 @theme inline {
@@ -40,6 +55,15 @@
   --color-line: var(--line);
   --color-mint: var(--mint);
   --color-lav: var(--lav);
+  /* Black & white UI: every palette colour used in the app maps onto the monochrome tokens */
+  --color-white: var(--on-accent);
+  --color-teal-50: var(--tint); --color-teal-100: var(--tint-2); --color-teal-200: var(--line-strong); --color-teal-300: var(--ink);
+  --color-teal-400: var(--accent); --color-teal-500: var(--accent); --color-teal-600: var(--accent); --color-teal-700: var(--accent-hover); --color-teal-900: var(--tint);
+  --color-emerald-50: var(--tint); --color-emerald-100: var(--tint-2); --color-emerald-300: var(--ink); --color-emerald-500: var(--accent); --color-emerald-600: var(--accent-hover); --color-emerald-700: var(--ink);
+  --color-rose-50: var(--tint); --color-rose-100: var(--tint-2); --color-rose-200: var(--line-strong); --color-rose-300: var(--ink); --color-rose-500: var(--accent); --color-rose-600: var(--ink); --color-rose-700: var(--ink);
+  --color-amber-50: var(--tint); --color-amber-100: var(--tint-2); --color-amber-200: var(--line-strong); --color-amber-300: var(--mid); --color-amber-500: var(--accent); --color-amber-700: var(--ink);
+  --color-violet-100: var(--tint-2); --color-violet-300: var(--ink); --color-violet-500: var(--accent); --color-violet-700: var(--ink);
+  --color-sky-100: var(--tint-2); --color-sky-300: var(--ink); --color-sky-500: var(--accent); --color-sky-700: var(--ink);
 }
 
 body {

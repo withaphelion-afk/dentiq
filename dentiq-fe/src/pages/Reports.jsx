@@ -4,8 +4,8 @@ import { useStore } from '../data/store'
 import { rupees, fmtDay } from '../data/format'
 import { Sk } from '../components/Shimmer'
 
-// Validated (light + dark surfaces): teal / violet
-const MODE_COLOR = { Cash: '#0d9488', UPI: '#8b5cf6' }
+// Monochrome: ink vs mid-grey, always paired with direct labels and the legend
+const MODE_COLOR = { Cash: 'var(--accent)', UPI: 'var(--mid)' }
 
 const shiftMonth = (m, n) => { const [y, mo] = m.split('-').map(Number); const d = new Date(y, mo - 1 + n, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }
 const monthLabel = (m) => new Date(`${m}-01T12:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })

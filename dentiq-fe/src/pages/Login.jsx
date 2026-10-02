@@ -17,7 +17,7 @@ export default function Login() {
   }
 
   return (
-    <div className="grid min-h-screen place-items-center bg-gradient-to-b from-teal-50 to-bg px-4 dark:from-[#06201d]">
+    <div className="grid min-h-screen place-items-center bg-gradient-to-b from-card to-bg px-4">
       <form onSubmit={submit} className="rise w-full max-w-sm rounded-3xl bg-card p-6 shadow-xl">
         <Logo className="mb-5 h-12 w-12" />
         <h1 className="text-2xl font-extrabold">Dentiq</h1>
