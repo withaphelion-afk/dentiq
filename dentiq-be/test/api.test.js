@@ -5,6 +5,7 @@ import { connectDB, disconnectDB } from '../src/db.js'
 import { createApp } from '../src/app.js'
 import { seed } from '../src/seed.js'
 import { addDays, today } from '../src/utils/date.js'
+import { config } from '../src/config.js'
 
 let api, auth
 
@@ -12,7 +13,7 @@ before(async () => {
   await connectDB('memory')
   await seed({ demo: true })
   api = request(createApp())
-  const { body } = await api.post('/api/auth/login').send({ password: 'dentiq' })
+  const { body } = await api.post('/api/auth/login').send({ password: config.doctorPassword })
   auth = { Authorization: `Bearer ${body.token}` }
 })
 after(disconnectDB)
@@ -95,4 +96,9 @@ test('settings update and rescheduling an appointment', async () => {
   const a = appts.find((x) => x.status === 'upcoming')
   const moved = (await api.patch(`/api/appointments/${a.id}`).set(auth).send({ date: addDays(today(), 3), time: '15:30' }).expect(200)).body
   assert.equal(moved.time, '15:30')
+})
+
+test('cron endpoint requires the secret', async () => {
+  await api.post('/api/cron/reminders').expect(401)
+  await api.post('/api/cron/reminders').set('Authorization', 'Bearer wrong').expect(401)
 })

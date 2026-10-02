@@ -9,6 +9,7 @@ export const config = {
   doctorPassword: env.DOCTOR_PASSWORD || 'dentiq',
   clientOrigin: (env.CLIENT_ORIGIN || 'http://localhost:5173').split(','),
   tz: env.TZ_NAME || 'Asia/Kolkata',
+  cronSecret: env.CRON_SECRET,
   whatsapp: {
     token: env.WA_TOKEN,
     phoneNumberId: env.WA_PHONE_NUMBER_ID,

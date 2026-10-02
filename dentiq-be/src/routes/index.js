@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
+import { timingSafeEqual } from 'node:crypto'
 import rateLimit from 'express-rate-limit'
 import { z } from 'zod'
 import { Appointment, Patient, Payment, User, Visit } from '../models/index.js'
@@ -7,9 +8,9 @@ import { requireAuth, signToken } from '../middleware/auth.js'
 import { HttpError } from '../middleware/error.js'
 import { getSettings } from '../services/settings.js'
 import { collectDue, createVisit } from '../services/visits.js'
-import { pendingReminders, sendReminder } from '../services/reminders.js'
+import { pendingReminders, runAutoReminders, sendReminder } from '../services/reminders.js'
 import { monthReport } from '../services/reports.js'
-import { whatsappAuto } from '../config.js'
+import { config, whatsappAuto } from '../config.js'
 import { addDays, hhmm, isoDate, today } from '../utils/date.js'
 
 const r = Router()
@@ -28,6 +29,15 @@ r.post('/auth/login', rateLimit({ windowMs: 15 * 60e3, limit: 20 }), async (req,
 })
 
 r.get('/health', (_req, res) => res.json({ ok: true }))
+
+// External scheduler (cron-job.org) calls this every ~15 min with `Authorization: Bearer <CRON_SECRET>`.
+// Sending only happens after the daily send time and is idempotent, so frequent calls are safe.
+const sameSecret = (a = '', b = '') => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b))
+r.all('/cron/reminders', async (req, res) => {
+  const given = req.get('authorization')?.replace(/^Bearer /, '')
+  if (!config.cronSecret || !sameSecret(given, config.cronSecret)) throw new HttpError(401, 'Unauthorized')
+  res.json(await runAutoReminders())
+})
 r.use(requireAuth)
 
 // ---- Settings ----

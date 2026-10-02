@@ -7,6 +7,7 @@ import { errorHandler } from './middleware/error.js'
 
 export function createApp() {
   const app = express()
+  app.set('trust proxy', 1) // behind Vercel's edge: use the real client IP for rate limiting
   app.use(helmet())
   app.use(cors({ origin: config.clientOrigin }))
   app.use(express.json({ limit: '200kb' }))
