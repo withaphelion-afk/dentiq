@@ -11,4 +11,4 @@ export function requireAuth(req, res, next) {
   }
 }
 
-export const signToken = (user) => jwt.sign({ sub: String(user._id), username: user.username }, config.jwtSecret, { expiresIn: '30d' })
+export const signToken = (user) => jwt.sign({ sub: String(user._id), username: user.username }, config.jwtSecret, { expiresIn: '365d' } // log in once per device)
