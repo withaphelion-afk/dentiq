@@ -2,8 +2,18 @@
 const BASE = import.meta.env.VITE_API_URL || '/api'
 const KEY = 'dentiq-token'
 
+// Expiry time (ms) encoded in the JWT; 0 if unreadable
+export const tokenExpiry = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).exp * 1000 } catch { return 0 } }
+
 export const tokenStore = {
-  get: () => { try { return localStorage.getItem(KEY) } catch { return null } },
+  get: () => {
+    try {
+      const t = localStorage.getItem(KEY)
+      if (t && tokenExpiry(t) > Date.now()) return t
+      localStorage.removeItem(KEY) // expired session
+    } catch { /* storage unavailable */ }
+    return null
+  },
   set: (t) => { try { if (t) localStorage.setItem(KEY, t); else localStorage.removeItem(KEY) } catch { /* storage unavailable */ } },
 }
 

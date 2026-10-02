@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { api, tokenStore } from './api'
+import { api, tokenExpiry, tokenStore } from './api'
 import { addDays, isoDay } from './format'
 
 // App state backed by the Dentiq API. Every mutation calls the server, then refreshes what it touched.
@@ -44,6 +44,15 @@ export function StoreProvider({ children }) {
     settings: async () => setSettings(await api.get('/settings')),
   }
   const refresh = (...keys) => Promise.all((keys.length ? keys : Object.keys(load)).map((k) => load[k]()))
+
+  // Session lasts 6 hours: log out when it expires (also re-checked when the app comes back into view)
+  useEffect(() => {
+    if (!token) return
+    const expire = () => { if (tokenExpiry(token) <= Date.now()) { logout(); flash('Session expired. Please log in again.') } }
+    const timer = setTimeout(expire, Math.max(tokenExpiry(token) - Date.now(), 0))
+    document.addEventListener('visibilitychange', expire)
+    return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', expire) }
+  }, [token, logout, flash])
 
   useEffect(() => {
     if (!token) return
