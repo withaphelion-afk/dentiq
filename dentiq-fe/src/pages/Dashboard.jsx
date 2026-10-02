@@ -1,4 +1,5 @@
-import { ArrowRight, UserPlus, Stethoscope, CheckCircle2, Clock, CircleDot, MessageCircle, Wallet, Users, AlertCircle, Check, Zap } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowRight, Eye, EyeOff, UserPlus, Stethoscope, CheckCircle2, Clock, CircleDot, MessageCircle, Wallet, Users, AlertCircle, Check, Zap } from 'lucide-react'
 import { rupees, fmtTime, fmtDay } from '../data/format'
 import { useStore } from '../data/store'
 import { Avatar } from '../components/Layout'
@@ -111,11 +112,11 @@ function Reminders() {
   )
 }
 
-function Stat({ icon: Icon, value, label, tone }) {
+function Stat({ icon: Icon, value, label, tone, hidden }) {
   return (
     <div className="rounded-2xl bg-card p-3 md:p-4">
       <div className={`mb-3 grid h-9 w-9 place-items-center rounded-xl ${tone}`}><Icon size={18} /></div>
-      <p className="text-lg font-extrabold tabular-nums md:text-2xl">{value}</p>
+      <p className="text-lg font-extrabold tabular-nums md:text-2xl" aria-label={hidden ? `${label} hidden` : undefined}>{hidden ? '••••' : value}</p>
       <p className="text-xs font-medium text-muted">{label}</p>
     </div>
   )
@@ -126,6 +127,9 @@ export default function Dashboard({ onNewVisit, onNewPatient }) {
   const done = queue.filter((a) => a.status === 'done').length
   const dues = patients.reduce((s, p) => s + p.due, 0)
   const card = 'rise group relative overflow-hidden rounded-3xl p-4 text-left transition hover:-translate-y-0.5 md:p-5'
+  // Hide money and patient counts when someone else can see the screen; remembered on this device
+  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem('dentiq-hide-stats') === '1' } catch { return false } })
+  const toggleHidden = () => setHidden((h) => { try { localStorage.setItem('dentiq-hide-stats', h ? '0' : '1') } catch { /* storage unavailable */ } return !h })
   const arrow = 'absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-ink text-card transition group-hover:translate-x-1 md:bottom-5 md:right-5 md:top-auto md:h-11 md:w-11'
 
   return (
@@ -133,7 +137,12 @@ export default function Dashboard({ onNewVisit, onNewPatient }) {
       <section className="min-w-0 space-y-6">
         <div className="rise">
           <h1 className="text-2xl font-medium md:text-3xl">{greeting()}, <span className="font-extrabold">{settings?.doctorName}</span></h1>
-          <p className="mt-1 text-sm text-muted">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })} · {queue.length - done} patients left today</p>
+          <p className="mt-1 flex items-center gap-2 text-sm text-muted">
+            {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}{!hidden && ` · ${queue.length - done} patients left today`}
+            <button onClick={toggleHidden} aria-pressed={hidden} title={hidden ? 'Show numbers' : 'Hide numbers'} className="grid h-8 w-8 place-items-center rounded-lg border border-line bg-card text-muted hover:text-ink">
+              {hidden ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 md:gap-4">
@@ -152,9 +161,9 @@ export default function Dashboard({ onNewVisit, onNewPatient }) {
         </div>
 
         <div className="rise grid grid-cols-3 gap-3 md:gap-4" style={{ animationDelay: '120ms' }}>
-          <Stat icon={Users} value={`${done}/${queue.length}`} label="Seen today" tone="bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300" />
-          <Stat icon={Wallet} value={rupees(collected)} label="Collected" tone="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" />
-          <Stat icon={AlertCircle} value={rupees(dues)} label="Dues pending" tone="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" />
+          <Stat icon={Users} value={`${done}/${queue.length}`} label="Seen today" hidden={hidden} tone="bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300" />
+          <Stat icon={Wallet} value={rupees(collected)} label="Collected" hidden={hidden} tone="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" />
+          <Stat icon={AlertCircle} value={rupees(dues)} label="Dues pending" hidden={hidden} tone="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" />
         </div>
 
         {/* On mobile the queue sits here; on wide screens it moves to the right column */}
