@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "dentiq-fe", "runtimeExecutable": "npm", "runtimeArgs": ["--prefix", "dentiq-fe", "run", "dev"], "port": 5173 }
+  ]
+}

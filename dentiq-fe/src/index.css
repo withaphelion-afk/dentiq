@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* Daikon: drop font files in public/fonts/ (or install it on the device). Falls back to Plus Jakarta Sans. */
+@font-face { font-family: "Daikon"; src: local("Daikon"), local("Daikon Regular"), url("/fonts/Daikon-Regular.woff2") format("woff2"), url("/fonts/Daikon-Regular.otf") format("opentype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Daikon"; src: local("Daikon Medium"), url("/fonts/Daikon-Medium.woff2") format("woff2"), url("/fonts/Daikon-Medium.otf") format("opentype"); font-weight: 500 600; font-display: swap; }
+@font-face { font-family: "Daikon"; src: local("Daikon Bold"), url("/fonts/Daikon-Bold.woff2") format("woff2"), url("/fonts/Daikon-Bold.otf") format("opentype"); font-weight: 700 900; font-display: swap; }
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #eef3f2;
+  --card: #ffffff;
+  --ink: #0f1f1d;
+  --muted: #6b7f7c;
+  --line: #e3ebe9;
+  --mint: #c9f0dc;
+  --lav: #dcd8fb;
+  --sh1: #e6eeec;
+  --sh2: #f6faf9;
+}
+
+.dark {
+  --bg: #0a1110;
+  --card: #121b1a;
+  --ink: #e8f1ef;
+  --muted: #8a9e9a;
+  --line: #1f2b29;
+  --mint: #173a2b;
+  --lav: #27264a;
+  --sh1: #17211f;
+  --sh2: #22302d;
+}
+
+@theme inline {
+  --font-sans: "Daikon", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-mint: var(--mint);
+  --color-lav: var(--lav);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, var(--sh1) 0%, var(--sh2) 50%, var(--sh1) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.rise { animation: rise 0.45s cubic-bezier(.2,.8,.2,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer, .rise { animation: none; }
+}
+
+button, input, textarea, select { font: inherit; }
+
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.sheet { animation: sheet-up 0.32s cubic-bezier(.2,.8,.2,1) both; }
+.fade { animation: fade 0.2s ease both; }
+@media (min-width: 768px) { .sheet { animation: rise 0.3s cubic-bezier(.2,.8,.2,1) both; } }
