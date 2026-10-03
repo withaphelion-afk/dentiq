@@ -16,7 +16,13 @@ function buildMessage(kind, patient, appt, settings) {
     time: appt?.time ? ` at ${prettyTime(appt.time)}` : '',
   }
   const tpl = kind === 'appointment' ? settings.reminders.appointmentMessage : settings.reminders.recallMessage
-  return { text: fill(tpl, vars), params: [vars.name, vars.date, appt?.time ? prettyTime(appt.time) : '', vars.clinic] }
+  // Template params must match the approved Meta templates exactly, and none may be empty:
+  //   appointment_reminder: {{1}} name, {{2}} date, {{3}} time, {{4}} clinic
+  //   recall_reminder:      {{1}} name, {{2}} clinic
+  const params = kind === 'appointment'
+    ? [vars.name, vars.date, appt?.time ? prettyTime(appt.time) : 'any time', vars.clinic]
+    : [vars.name, vars.clinic]
+  return { text: fill(tpl, vars), params }
 }
 
 // Everything that should be sent now: tomorrow's appointments + patients due for a recall.

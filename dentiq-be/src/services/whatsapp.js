@@ -1,6 +1,6 @@
 import { config } from '../config.js'
 
-const GRAPH = 'https://graph.facebook.com/v21.0'
+const GRAPH = 'https://graph.facebook.com/v25.0'
 
 // Business-initiated messages must use a template approved in WhatsApp Manager.
 export async function sendTemplate(phone10, template, params) {
