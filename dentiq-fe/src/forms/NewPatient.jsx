@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { clearDraft, loadDraft, saveDraft } from '../data/persist'
 import { AlertTriangle } from 'lucide-react'
 import Sheet, { Label, Chip, inputCls, PrimaryBtn, GhostBtn } from '../components/Sheet'
 import { useStore } from '../data/store'
@@ -8,12 +9,17 @@ export default function NewPatient({ prefill = '', onClose, onSaved }) {
   const { addPatient, findByPhone, settings } = useStore()
   const [saving, setSaving] = useState(false)
   const startsWithDigit = /^\d/.test(prefill.trim())
-  const [name, setName] = useState(startsWithDigit ? '' : prefill)
-  const [phone, setPhone] = useState(startsWithDigit ? prefill : '')
-  const [age, setAge] = useState('')
-  const [gender, setGender] = useState('')
-  const [alerts, setAlerts] = useState([])
-  const [note, setNote] = useState('')
+  const [d] = useState(() => (prefill ? null : loadDraft('patient')) || {})
+  const [name, setName] = useState(d.name ?? (startsWithDigit ? '' : prefill))
+  const [phone, setPhone] = useState(d.phone ?? (startsWithDigit ? prefill : ''))
+  const [age, setAge] = useState(d.age || '')
+  const [gender, setGender] = useState(d.gender || '')
+  const [alerts, setAlerts] = useState(d.alerts || [])
+  const [note, setNote] = useState(d.note || '')
+  useEffect(() => {
+    if (name || phone || note) saveDraft('patient', { name, phone, age, gender, alerts, note })
+  }, [name, phone, age, gender, alerts, note])
+  const close = () => { clearDraft('patient'); onClose() }
 
   const digits = phone.replace(/\D/g, '')
   const existing = findByPhone(phone)
@@ -25,6 +31,7 @@ export default function NewPatient({ prefill = '', onClose, onSaved }) {
     setSaving(true)
     try {
       const p = await addPatient({ name: name.trim().replace(/\b\w/g, (c) => c.toUpperCase()), phone: digits, age: Number(age) || undefined, gender, alerts, note })
+      clearDraft('patient')
       onSaved(p, startVisit)
     } catch { setSaving(false) }
   }
@@ -33,7 +40,7 @@ export default function NewPatient({ prefill = '', onClose, onSaved }) {
     <Sheet
       title="New Patient"
       subtitle="Name and phone are enough. Add the rest later."
-      onClose={onClose}
+      onClose={close}
       footer={<>
         <GhostBtn disabled={!valid || saving} onClick={() => save(false)}>Save</GhostBtn>
         <PrimaryBtn disabled={!valid || saving} onClick={() => save(true)}>Save &amp; start visit</PrimaryBtn>

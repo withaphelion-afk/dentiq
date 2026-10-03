@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { clearDraft, loadDraft, saveDraft } from '../data/persist'
 import { Search, X, Plus, AlertTriangle, MessageCircle, UserPlus } from 'lucide-react'
 import Sheet, { Label, Chip, inputCls, PrimaryBtn } from '../components/Sheet'
 import ToothChart from '../components/ToothChart'
@@ -132,15 +133,22 @@ export default function NewVisit({ patient: initial, onClose, onNewPatient, onSa
   const { addVisit, settings } = useStore()
   const [saving, setSaving] = useState(false)
   const [patient, setPatient] = useState(initial || null)
-  const [items, setItems] = useState([])
-  const [teeth, setTeeth] = useState([])
-  const [notes, setNotes] = useState('')
-  const [paidRaw, setPaidRaw] = useState(null) // null = full amount
-  const [mode, setMode] = useState('Cash')
-  const [followDays, setFollowDays] = useState(0)
-  const [remind, setRemind] = useState(true)
+  // Draft per patient: survives refresh / accidental close for 24h
+  const draftKey = `visit-${initial?.id || 'new'}`
+  const [d] = useState(() => loadDraft(draftKey) || {})
+  const [items, setItems] = useState(d.items || [])
+  const [teeth, setTeeth] = useState(d.teeth || [])
+  const [notes, setNotes] = useState(d.notes || '')
+  const [paidRaw, setPaidRaw] = useState(d.paidRaw ?? null) // null = full amount
+  const [mode, setMode] = useState(d.mode || 'Cash')
+  const [followDays, setFollowDays] = useState(d.followDays || 0)
+  const [remind, setRemind] = useState(d.remind ?? true)
   const today = isoDay()
-  const [visitDate, setVisitDate] = useState(today) // past date = back-entry of old history
+  const [visitDate, setVisitDate] = useState(d.visitDate && d.visitDate <= today ? d.visitDate : today) // past date = back-entry of old history
+  useEffect(() => {
+    if (items.length || teeth.length || notes) saveDraft(draftKey, { items, teeth, notes, paidRaw, mode, followDays, remind, visitDate })
+  }, [draftKey, items, teeth, notes, paidRaw, mode, followDays, remind, visitDate])
+  const close = () => { clearDraft(draftKey); onClose() }
   const past = visitDate < today
 
   const total = items.reduce((s, i) => s + i.fee, 0)
@@ -154,13 +162,14 @@ export default function NewVisit({ patient: initial, onClose, onNewPatient, onSa
     const followUp = followDays && !past ? { date: isoDay(addDays(followDays)), remind } : null
     try {
       await addVisit({ patientId: patient.id, date: visitDate, items, teeth, notes, paid, mode, followUp })
+      clearDraft(draftKey)
       onSaved({ patient, paid, due, followUp, date: past ? visitDate : null })
     } catch { setSaving(false) }
   }
 
   if (!patient) {
     return (
-      <Sheet title="New Visit" subtitle="Who's in the chair?" onClose={onClose}>
+      <Sheet title="New Visit" subtitle="Who's in the chair?" onClose={close}>
         <PatientPicker onPick={setPatient} onNewPatient={onNewPatient} />
       </Sheet>
     )
@@ -169,7 +178,7 @@ export default function NewVisit({ patient: initial, onClose, onNewPatient, onSa
   return (
     <Sheet
       title="New Visit"
-      onClose={onClose}
+      onClose={close}
       footer={
         <div className="flex w-full items-center gap-3">
           <div className="min-w-0">
