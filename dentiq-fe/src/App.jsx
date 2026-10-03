@@ -71,9 +71,9 @@ export default function App() {
           patient={sheet.patient}
           onClose={closeSheet}
           onNewPatient={newPatient}
-          onSaved={({ patient, paid, due, followUp }) => {
+          onSaved={({ patient, paid, due, followUp, date }) => {
             setSheet(null)
-            flash(`Saved ${patient.name.split(' ')[0]} · ${rupees(paid)} paid${due > 0 ? ` · ${rupees(due)} due` : ''}${followUp ? ` · next visit ${fmtDay(followUp.date)}` : ''}`)
+            flash(`Saved ${patient.name.split(' ')[0]}${date ? ` (visit of ${fmtDay(date)})` : ''} · ${rupees(paid)} paid${due > 0 ? ` · ${rupees(due)} due` : ''}${followUp ? ` · next visit ${fmtDay(followUp.date)}` : ''}`)
           }}
         />
       )}

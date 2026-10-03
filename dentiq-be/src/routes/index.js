@@ -109,6 +109,7 @@ r.post('/patients/:id/collect', async (req, res) => {
 r.post('/visits', async (req, res) => {
   const data = z.object({
     patientId: z.string(),
+    date: date.optional(), // past date to back-fill history; defaults to today
     items: z.array(z.object({ name: z.string().trim().min(1), fee: money })).min(1),
     teeth: z.array(z.number().int().min(11).max(85)).optional(),
     notes: z.string().optional(), paid: money.optional(), mode: mode.optional(),

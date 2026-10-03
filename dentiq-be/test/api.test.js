@@ -57,6 +57,21 @@ test('a visit updates dues, payments, queue, follow-up and treatment usage', asy
   assert.equal(profile.appointments[0].date, followDate)
 })
 
+test('back-filled past visits go into history without touching today', async () => {
+  const kiran = (await api.get('/api/patients').set(auth)).body.find((p) => p.name === 'Kiran Dhillon')
+  const before = (await api.get(`/api/appointments?from=${today()}&to=${today()}`).set(auth)).body.length
+  const old = addDays(today(), -400)
+
+  const { body } = await api.post('/api/visits').set(auth).send({ patientId: kiran.id, date: old, items: [{ name: 'Extraction', fee: 800 }], paid: 500 }).expect(201)
+  assert.equal(body.visit.date, old)
+  assert.equal(body.patient.lastVisit, kiran.lastVisit, 'older visit keeps the newer last-visit')
+  assert.equal(body.patient.due, kiran.due + 300)
+  assert.equal((await api.get(`/api/appointments?from=${today()}&to=${today()}`).set(auth)).body.length, before, 'queue untouched')
+  assert.ok((await api.get(`/api/payments?from=${old}&to=${old}`).set(auth)).body.some((p) => p.amount === 500))
+
+  await api.post('/api/visits').set(auth).send({ patientId: kiran.id, date: addDays(today(), 2), items: [{ name: 'Extraction', fee: 800 }] }).expect(400)
+})
+
 test('collecting dues reduces them and records a payment', async () => {
   const anjali = (await api.get('/api/patients').set(auth)).body.find((p) => p.name === 'Anjali Verma')
   assert.equal(anjali.due, 4000)

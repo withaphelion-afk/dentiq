@@ -139,6 +139,9 @@ export default function NewVisit({ patient: initial, onClose, onNewPatient, onSa
   const [mode, setMode] = useState('Cash')
   const [followDays, setFollowDays] = useState(0)
   const [remind, setRemind] = useState(true)
+  const today = isoDay()
+  const [visitDate, setVisitDate] = useState(today) // past date = back-entry of old history
+  const past = visitDate < today
 
   const total = items.reduce((s, i) => s + i.fee, 0)
   const paid = paidRaw === null ? total : Math.min(paidRaw, total + (patient?.due || 0))
@@ -148,10 +151,10 @@ export default function NewVisit({ patient: initial, onClose, onNewPatient, onSa
   const save = async () => {
     if (saving) return
     setSaving(true)
-    const followUp = followDays ? { date: isoDay(addDays(followDays)), remind } : null
+    const followUp = followDays && !past ? { date: isoDay(addDays(followDays)), remind } : null
     try {
-      await addVisit({ patientId: patient.id, items, teeth, notes, paid, mode, followUp })
-      onSaved({ patient, paid, due, followUp })
+      await addVisit({ patientId: patient.id, date: visitDate, items, teeth, notes, paid, mode, followUp })
+      onSaved({ patient, paid, due, followUp, date: past ? visitDate : null })
     } catch { setSaving(false) }
   }
 
@@ -193,6 +196,16 @@ export default function NewVisit({ patient: initial, onClose, onNewPatient, onSa
           <AlertTriangle size={16} /> {patient.alerts.join(' · ')}
         </div>
       )}
+
+      <div>
+        <Label hint={past ? 'Old record: today’s queue and bookings are not touched' : ''}>Visit date</Label>
+        <div className="flex flex-wrap items-center gap-2">
+          <Chip active={visitDate === today} onClick={() => setVisitDate(today)}>Today</Chip>
+          <Chip active={visitDate === isoDay(addDays(-1))} onClick={() => setVisitDate(isoDay(addDays(-1)))}>Yesterday</Chip>
+          <input type="date" value={visitDate} max={today} onChange={(e) => e.target.value && e.target.value <= today && setVisitDate(e.target.value)}
+            aria-label="Pick an earlier date" className={`h-10 rounded-full border px-3 text-sm font-semibold outline-none ${past && visitDate !== isoDay(addDays(-1)) ? 'border-teal-600 bg-teal-600 text-white' : 'border-line bg-card'}`} />
+        </div>
+      </div>
 
       <div>
         <Label>Treatment</Label>
@@ -237,7 +250,7 @@ export default function NewVisit({ patient: initial, onClose, onNewPatient, onSa
         </div>
       </div>
 
-      <div>
+      {!past && <div>
         <Label hint={followDays ? fmtDate(addDays(followDays)) : ''}>Next visit</Label>
         <div className="flex flex-wrap gap-2">
           {FOLLOW_UPS.map(([l, d]) => <Chip key={l} active={followDays === d} onClick={() => setFollowDays(d)}>{l}</Chip>)}
@@ -248,7 +261,7 @@ export default function NewVisit({ patient: initial, onClose, onNewPatient, onSa
             <MessageCircle size={16} className="text-emerald-500" /> Send WhatsApp reminder a day before
           </label>
         )}
-      </div>
+      </div>}
     </Sheet>
   )
 }
