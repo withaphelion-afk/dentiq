@@ -51,6 +51,16 @@ const paymentSchema = new Schema({
   kind: { type: String, enum: ['visit', 'due'], default: 'visit' },
 }, { timestamps: true })
 
+const photoSchema = new Schema({
+  patientId: ref('Patient'),
+  visitId: { type: Schema.Types.ObjectId, ref: 'Visit' },
+  date: { type: String, required: true, index: true },
+  tooth: Number, // FDI number, optional
+  caption: String,
+  path: { type: String, required: true }, // storage key (Vercel Blob pathname, or file name in dev)
+  size: Number,
+}, { timestamps: true })
+
 const reminderLogSchema = new Schema({
   patientId: ref('Patient'),
   kind: { type: String, enum: ['appointment', 'recall'], required: true },
@@ -84,6 +94,7 @@ export const Patient = model('Patient', patientSchema)
 export const Visit = model('Visit', visitSchema)
 export const Appointment = model('Appointment', appointmentSchema)
 export const Payment = model('Payment', paymentSchema)
+export const Photo = model('Photo', photoSchema)
 export const ReminderLog = model('ReminderLog', reminderLogSchema)
 export const Settings = model('Settings', settingsSchema)
 export const User = model('User', userSchema)

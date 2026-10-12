@@ -5,16 +5,22 @@ import ToothChart from '../components/ToothChart'
 import { useStore } from '../data/store'
 import { rupees, fmtDay, fmtLongDay, fmtTime, fmtPhone, waLink } from '../data/format'
 import { Sk } from '../components/Shimmer'
+import PhotoGallery from '../components/PhotoGallery'
+import PhotoImage from '../components/PhotoImage'
+import { Lightbox } from '../components/PhotoViewer'
 
 export default function Profile({ id, onBack, onVisit, onBook }) {
-  const { patientById, loadPatient, collectDue, flash } = useStore()
+  const { patientById, loadPatient, collectDue, flash, loadPhotos, updatePhoto, deletePhoto } = useStore()
   const p = patientById(id)
   const [detail, setDetail] = useState(null)
   const [tooth, setTooth] = useState([])
   const [collecting, setCollecting] = useState(false)
+  const [photos, setPhotos] = useState([])
+  const [viewer, setViewer] = useState(null) // { list, index }
 
   // Reload history whenever the patient changes (new visit, dues collected, booking)
   useEffect(() => { loadPatient(id).then(setDetail).catch(() => {}) }, [id, p?.updatedAt, p?.nextVisit]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadPhotos(id).then(setPhotos).catch(() => {}) }, [id, p?.updatedAt]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!p) return null
   const history = detail?.visits || []
@@ -100,6 +106,15 @@ export default function Profile({ id, onBack, onVisit, onBook }) {
             ))}
           </div>
 
+          <PhotoGallery
+            patient={p}
+            photos={photos}
+            toothFilter={tooth[0]}
+            onClearTooth={() => setTooth([])}
+            onAdd={(ph) => setPhotos((xs) => [ph, ...xs])}
+            onOpen={(ph, list) => setViewer({ list, index: list.findIndex((x) => x.id === ph.id) })}
+          />
+
           {/* Visit history */}
           <div className="rise rounded-3xl bg-card p-5" style={{ animationDelay: '140ms' }}>
             <div className="mb-4 flex items-center justify-between">
@@ -129,6 +144,15 @@ export default function Profile({ id, onBack, onVisit, onBook }) {
                         </span>
                       </div>
                       {v.notes && <p className="mt-1.5 text-sm text-muted">{v.notes}</p>}
+                      {photos.some((ph) => ph.visitId === v.id) && (
+                        <div className="mt-2 flex gap-1.5 overflow-x-auto">
+                          {photos.filter((ph) => ph.visitId === v.id).map((ph) => (
+                            <button key={ph.id} onClick={() => { const list = photos.filter((x) => x.visitId === v.id); setViewer({ list, index: list.findIndex((x) => x.id === ph.id) }) }} className="shrink-0 overflow-hidden rounded-lg">
+                              <PhotoImage id={ph.id} className="h-12 w-16 object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </li>
                   )
                 })}
@@ -150,6 +174,28 @@ export default function Profile({ id, onBack, onVisit, onBook }) {
           </div>
         </aside>
       </div>
+      {viewer && (
+        <Lightbox
+          photos={viewer.list}
+          index={viewer.index}
+          onIndex={(index) => setViewer((v) => ({ ...v, index }))}
+          onClose={() => setViewer(null)}
+          onTooth={async (ph, t) => {
+            const u = await updatePhoto(ph.id, { tooth: t }).catch(() => null)
+            if (!u) return
+            setPhotos((xs) => xs.map((x) => (x.id === u.id ? u : x)))
+            setViewer((v) => ({ ...v, list: v.list.map((x) => (x.id === u.id ? u : x)) }))
+          }}
+          onDelete={async (ph) => {
+            try { await deletePhoto(ph.id) } catch { return }
+            setPhotos((xs) => xs.filter((x) => x.id !== ph.id))
+            setViewer((v) => {
+              const list = v.list.filter((x) => x.id !== ph.id)
+              return list.length ? { list, index: Math.min(v.index, list.length - 1) } : null
+            })
+          }}
+        />
+      )}
     </div>
   )
 }

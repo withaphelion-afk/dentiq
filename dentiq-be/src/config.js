@@ -10,6 +10,9 @@ export const config = {
   clientOrigin: (env.CLIENT_ORIGIN || 'http://localhost:5173').split(','),
   tz: env.TZ_NAME || 'Asia/Kolkata',
   cronSecret: env.CRON_SECRET,
+  blobToken: env.BLOB_READ_WRITE_TOKEN,
+  uploadDir: env.UPLOAD_DIR || new URL('../.uploads', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'),
+  production: env.NODE_ENV === 'production' || Boolean(env.VERCEL),
   whatsapp: {
     token: env.WA_TOKEN,
     phoneNumberId: env.WA_PHONE_NUMBER_ID,

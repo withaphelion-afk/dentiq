@@ -1,4 +1,4 @@
-import { Appointment, Patient, Payment, Visit } from '../models/index.js'
+import { Appointment, Patient, Payment, Photo, Visit } from '../models/index.js'
 import { today } from '../utils/date.js'
 import { config } from '../config.js'
 import { learnTreatments } from './settings.js'
@@ -7,7 +7,7 @@ import { HttpError } from '../middleware/error.js'
 // Saving a visit updates everything the doctor would otherwise do by hand:
 // patient dues/last visit, payment record, today's queue entry, follow-up booking, treatment usage.
 // A past `date` back-fills history: it is recorded on that day and leaves today's queue and bookings alone.
-export async function createVisit({ patientId, date: visitDate, items, teeth = [], notes = '', paid, mode = 'Cash', followUp }) {
+export async function createVisit({ patientId, date: visitDate, photoIds = [], items, teeth = [], notes = '', paid, mode = 'Cash', followUp }) {
   const patient = await Patient.findById(patientId)
   if (!patient) throw new HttpError(404, 'Patient not found')
 
@@ -26,6 +26,8 @@ export async function createVisit({ patientId, date: visitDate, items, teeth = [
     patient.lastTreatment = items.map((i) => i.name).join(' + ')
   }
   await patient.save()
+  // Photos taken during this visit get attached to it and take its date
+  if (photoIds.length) await Photo.updateMany({ _id: { $in: photoIds }, patientId }, { visitId: visit._id, date })
   await learnTreatments(items)
   if (past) return { visit, patient, followUp: null }
 

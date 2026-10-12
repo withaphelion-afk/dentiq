@@ -3,6 +3,7 @@ import { clearDraft, loadDraft, saveDraft } from '../data/persist'
 import { Search, X, Plus, AlertTriangle, MessageCircle, UserPlus } from 'lucide-react'
 import Sheet, { Label, Chip, inputCls, PrimaryBtn } from '../components/Sheet'
 import ToothChart from '../components/ToothChart'
+import CameraPanel from '../components/CameraPanel'
 import { Avatar } from '../components/Layout'
 import { useStore } from '../data/store'
 import { rupees, isoDay, fmtPhone } from '../data/format'
@@ -138,6 +139,7 @@ export default function NewVisit({ patient: initial, onClose, onNewPatient, onSa
   const [d] = useState(() => loadDraft(draftKey) || {})
   const [items, setItems] = useState(d.items || [])
   const [teeth, setTeeth] = useState(d.teeth || [])
+  const [photos, setPhotos] = useState(d.photos || []) // taken during this visit, already uploaded
   const [notes, setNotes] = useState(d.notes || '')
   const [paidRaw, setPaidRaw] = useState(d.paidRaw ?? null) // null = full amount
   const [mode, setMode] = useState(d.mode || 'Cash')
@@ -146,8 +148,8 @@ export default function NewVisit({ patient: initial, onClose, onNewPatient, onSa
   const today = isoDay()
   const [visitDate, setVisitDate] = useState(d.visitDate && d.visitDate <= today ? d.visitDate : today) // past date = back-entry of old history
   useEffect(() => {
-    if (items.length || teeth.length || notes) saveDraft(draftKey, { items, teeth, notes, paidRaw, mode, followDays, remind, visitDate })
-  }, [draftKey, items, teeth, notes, paidRaw, mode, followDays, remind, visitDate])
+    if (items.length || teeth.length || notes || photos.length) saveDraft(draftKey, { items, teeth, photos, notes, paidRaw, mode, followDays, remind, visitDate })
+  }, [draftKey, items, teeth, photos, notes, paidRaw, mode, followDays, remind, visitDate])
   const close = () => { clearDraft(draftKey); onClose() }
   const past = visitDate < today
 
@@ -161,7 +163,7 @@ export default function NewVisit({ patient: initial, onClose, onNewPatient, onSa
     setSaving(true)
     const followUp = followDays && !past ? { date: isoDay(addDays(followDays)), remind } : null
     try {
-      await addVisit({ patientId: patient.id, date: visitDate, items, teeth, notes, paid, mode, followUp })
+      await addVisit({ patientId: patient.id, date: visitDate, photoIds: photos.map((p) => p.id), items, teeth, notes, paid, mode, followUp })
       clearDraft(draftKey)
       onSaved({ patient, paid, due, followUp, date: past ? visitDate : null })
     } catch { setSaving(false) }
@@ -224,6 +226,18 @@ export default function NewVisit({ patient: initial, onClose, onNewPatient, onSa
       <div>
         <Label hint="Optional">Teeth</Label>
         <ToothChart value={teeth} onChange={setTeeth} />
+      </div>
+
+      <div>
+        <Label hint={photos.length ? `${photos.length} attached` : 'Optional'}>Photos</Label>
+        <CameraPanel
+          patient={patient}
+          teeth={teeth}
+          photos={photos}
+          onAdd={(ph) => setPhotos((xs) => [...xs, ph])}
+          onUpdate={(ph) => setPhotos((xs) => xs.map((x) => (x.id === ph.id ? ph : x)))}
+          onRemove={(id) => setPhotos((xs) => xs.filter((x) => x.id !== id))}
+        />
       </div>
 
       <div>

@@ -1,5 +1,7 @@
 import { after, before, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import request from 'supertest'
 import { connectDB, disconnectDB } from '../src/db.js'
 import { createApp } from '../src/app.js'
@@ -7,6 +9,7 @@ import { seed } from '../src/seed.js'
 import { addDays, today } from '../src/utils/date.js'
 import { config } from '../src/config.js'
 
+process.env.UPLOAD_DIR = join(tmpdir(), `dentiq-test-${process.pid}`) // photos go to a temp folder in tests
 let api, auth
 
 before(async () => {
@@ -116,4 +119,37 @@ test('settings update and rescheduling an appointment', async () => {
 test('cron endpoint requires the secret', async () => {
   await api.post('/api/cron/reminders').expect(401)
   await api.post('/api/cron/reminders').set('Authorization', 'Bearer wrong').expect(401)
+})
+
+test('photos: upload, tag a tooth, attach to a visit, fetch, delete', async () => {
+  const patient = (await api.get('/api/patients').set(auth)).body.find((p) => p.name === 'Neha Arora')
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(3000, 7)])
+  const send = (qs, body = jpeg, type = 'image/jpeg') => api.post(`/api/photos?${qs}`).set(auth).set('Content-Type', type).send(body)
+
+  await api.post(`/api/photos?patientId=${patient.id}`).set('Content-Type', 'image/jpeg').send(jpeg).expect(401)
+  await send(`patientId=${patient.id}`, Buffer.alloc(3000, 1)).expect(400) // not a JPEG
+  await send(`patientId=${patient.id}&tooth=99`).expect(400)
+  await send('patientId=000000000000000000000000').expect(404)
+
+  const photo = (await send(`patientId=${patient.id}&tooth=36`).expect(201)).body
+  assert.equal(photo.tooth, 36)
+  assert.equal(photo.date, today())
+
+  const file = await api.get(`/api/photos/${photo.id}/file`).set(auth).buffer(true).parse((r, cb) => { const c = []; r.on('data', (d) => c.push(d)); r.on('end', () => cb(null, Buffer.concat(c))) }).expect(200)
+  assert.equal(Buffer.compare(file.body, jpeg), 0)
+  await api.get(`/api/photos/${photo.id}/file`).expect(401)
+
+  const cleared = (await api.patch(`/api/photos/${photo.id}`).set(auth).send({ tooth: null, caption: 'Before' }).expect(200)).body
+  assert.equal(cleared.tooth, undefined)
+  assert.equal(cleared.caption, 'Before')
+
+  const past = addDays(today(), -30)
+  await api.post('/api/visits').set(auth).send({ patientId: patient.id, date: past, photoIds: [photo.id], items: [{ name: 'Consultation', fee: 300 }] }).expect(201)
+  const [linked] = (await api.get(`/api/photos?patientId=${patient.id}`).set(auth)).body
+  assert.ok(linked.visitId)
+  assert.equal(linked.date, past)
+
+  await api.delete(`/api/photos/${photo.id}`).set(auth).expect(200)
+  await api.get(`/api/photos/${photo.id}/file`).set(auth).expect(404)
+  assert.equal((await api.get(`/api/photos?patientId=${patient.id}`).set(auth)).body.length, 0)
 })

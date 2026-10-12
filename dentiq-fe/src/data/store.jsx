@@ -119,6 +119,10 @@ export function StoreProvider({ children }) {
       setAppointments((xs) => xs.map((x) => (x.id === id ? { ...x, status: next[x.status] } : x))) // instant feedback
       return call(() => api.patch(`/appointments/${id}`, { status: next[a.status] })).catch(() => refresh('appointments'))
     },
+    uploadPhoto: (patientId, blob, tooth) => call(() => api.upload(`/photos?patientId=${patientId}${tooth ? `&tooth=${tooth}` : ''}`, blob)),
+    loadPhotos: (patientId) => call(() => api.get(`/photos?patientId=${patientId}`)),
+    updatePhoto: (id, data) => call(() => api.patch(`/photos/${id}`, data)),
+    deletePhoto: (id) => call(() => api.del(`/photos/${id}`)),
     saveSettings: (data) => call(async () => { const s = await api.put('/settings', data); setSettings(s); return s }),
     markReminder: (kind, id, via = 'manual') => call(async () => { const r = await api.post(`/reminders/${kind}/${id}`, { via }); await refresh('reminders'); return r }),
     report: (month) => call(() => api.get(`/reports?month=${month}`)),

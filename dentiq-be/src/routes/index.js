@@ -3,11 +3,13 @@ import bcrypt from 'bcryptjs'
 import { timingSafeEqual } from 'node:crypto'
 import rateLimit from 'express-rate-limit'
 import { z } from 'zod'
-import { Appointment, Patient, Payment, User, Visit } from '../models/index.js'
+import express from 'express'
+import { Appointment, Patient, Payment, Photo, User, Visit } from '../models/index.js'
 import { requireAuth, signToken } from '../middleware/auth.js'
 import { HttpError } from '../middleware/error.js'
 import { getSettings } from '../services/settings.js'
 import { collectDue, createVisit } from '../services/visits.js'
+import { addPhoto, openPhoto, removePhoto } from '../services/photos.js'
 import { pendingReminders, runAutoReminders, sendReminder } from '../services/reminders.js'
 import { monthReport } from '../services/reports.js'
 import { config, whatsappAuto } from '../config.js'
@@ -109,6 +111,7 @@ r.post('/patients/:id/collect', async (req, res) => {
 r.post('/visits', async (req, res) => {
   const data = z.object({
     patientId: z.string(),
+    photoIds: z.array(z.string()).max(40).optional(),
     date: date.optional(), // past date to back-fill history; defaults to today
     items: z.array(z.object({ name: z.string().trim().min(1), fee: money })).min(1),
     teeth: z.array(z.number().int().min(11).max(85)).optional(),
@@ -117,6 +120,31 @@ r.post('/visits', async (req, res) => {
   }).parse(req.body)
   res.status(201).json(await createVisit(data))
 })
+
+// ---- Photos (intra-oral camera) ----
+// The browser compresses each capture to ~300 KB JPEG and sends it as the raw request body.
+r.post('/photos', express.raw({ type: 'image/jpeg', limit: '4mb' }), async (req, res) => {
+  const q = z.object({ patientId: z.string(), date: date.optional(), tooth: z.coerce.number().int().min(11).max(85).optional() }).parse(req.query)
+  res.status(201).json(await addPhoto({ patientId: q.patientId, buf: req.body, date: q.date || today(), tooth: q.tooth }))
+})
+r.get('/photos', async (req, res) => {
+  const { patientId } = z.object({ patientId: z.string() }).parse(req.query)
+  res.json(await Photo.find({ patientId }).sort({ date: -1, createdAt: -1 }))
+})
+r.get('/photos/:id/file', async (req, res) => {
+  const { stream } = await openPhoto(req.params.id)
+  res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, max-age=31536000, immutable' })
+  stream.on('error', () => res.destroy()).pipe(res)
+})
+r.patch('/photos/:id', async (req, res) => {
+  const data = z.object({ tooth: z.number().int().min(11).max(85).nullable().optional(), caption: z.string().max(200).optional() }).parse(req.body)
+  const { tooth, caption } = data
+  const update = { ...(caption !== undefined && { caption }), ...(typeof tooth === 'number' && { tooth }), ...(tooth === null && { $unset: { tooth: 1 } }) }
+  const photo = await Photo.findByIdAndUpdate(req.params.id, update, { new: true })
+  if (!photo) throw new HttpError(404, 'Photo not found')
+  res.json(photo)
+})
+r.delete('/photos/:id', async (req, res) => { await removePhoto(req.params.id); res.json({ ok: true }) })
 
 // ---- Appointments ----
 r.get('/appointments', async (req, res) => {
