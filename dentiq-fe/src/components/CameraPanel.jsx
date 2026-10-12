@@ -30,6 +30,9 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
   const [devices, setDevices] = useState([])
   const [active, setActive] = useState(null)
   const [track, setTrack] = useState(null)
+  const [range, setRange] = useState(null) // brightness range the camera accepts, if any
+  const [brightness, setBrightness] = useState(0)
+  const [controls, setControls] = useState([]) // what the camera lets software control
   const [light, setLight] = useState('unknown') // on | off | hardware (the camera's LED isn't software-controllable)
   const [prefs, setPrefs] = useState(camPrefs.get)
   const [restart, setRestart] = useState(0)
@@ -64,7 +67,15 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
         const vt = stream.getVideoTracks()[0]
         vt.onended = () => setRestart((n) => n + 1) // unplugged
         // The camera's LED stays on while the camera is open, when the camera lets software control it
-        if ('torch' in (vt.getCapabilities?.() || {})) setLight(await vt.applyConstraints({ advanced: [{ torch: true }] }).then(() => 'on', () => 'hardware'))
+        const caps = vt.getCapabilities?.() || {}
+        setControls(Object.keys(caps).filter((k) => !['deviceId', 'groupId', 'width', 'height', 'aspectRatio', 'frameRate', 'facingMode', 'resizeMode'].includes(k)))
+        // No light control on many cameras: brighten the picture instead (applied on every start)
+        if (caps.brightness) {
+          const b = camPrefs.get().brightness ?? Math.round(caps.brightness.min + (caps.brightness.max - caps.brightness.min) * 0.7)
+          await vt.applyConstraints({ advanced: [{ brightness: b }] }).catch(() => {})
+          setBrightness(b); setRange(caps.brightness)
+        } else setRange(null)
+        if ('torch' in caps) setLight(await vt.applyConstraints({ advanced: [{ torch: true }] }).then(() => 'on', () => 'hardware'))
         else setLight('hardware')
         setTrack(vt)
         videoRef.current.srcObject = stream
@@ -87,6 +98,10 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
   const toggleLight = async () => {
     const next = light !== 'on'
     if (await track.applyConstraints({ advanced: [{ torch: next }] }).then(() => true, () => false)) setLight(next ? 'on' : 'off')
+  }
+  const changeBrightness = (b) => {
+    setBrightness(b); camPrefs.set({ brightness: b })
+    track?.applyConstraints({ advanced: [{ brightness: b }] }).catch(() => {})
   }
   const choose = (d) => { camPrefs.set({ camKey: camKey(d) }); setChooser(false); setRestart((n) => n + 1) }
 
@@ -209,7 +224,12 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
               {learning ? 'Now press the camera’s button… (Esc to cancel)' : prefs.key ? `Camera button: ${prefs.key} (change)` : 'Set camera button'}
             </button>
           </div>
-          {status === 'live' && light === 'hardware' && <p className="text-xs">Light: this camera’s LED is switched on the camera itself (dial or button on the handle), not from the app.</p>}
+          {status === 'live' && range && (
+            <label className="flex items-center gap-3 text-xs font-semibold text-ink">Brightness
+              <input type="range" min={range.min} max={range.max} step={range.step || 1} value={brightness} onChange={(e) => changeBrightness(Number(e.target.value))} aria-label="Brightness" className="h-2 flex-1 accent-teal-600" />
+            </label>
+          )}
+          {status === 'live' && light === 'hardware' && <p className="text-xs">This camera doesn’t let apps switch its light on, so Dentiq brightens the picture instead. Controls it exposes: {controls.length ? controls.join(', ') : 'none'}.</p>}
           {note && <p className="text-xs font-semibold">{note}</p>}
         </div>
       )}

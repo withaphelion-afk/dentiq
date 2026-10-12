@@ -4,7 +4,7 @@ const MAX_EDGE = 1600
 // Cameras that are part of the computer or software cameras: never chosen automatically
 const NOT_INTRAORAL = /truevision|integrated|built-?in|facetime|front|rear|back camera|laptop|ir camera|infrared|windows hello|virtual|obs|droidcam|snap camera|iriun|epoccam/i
 
-const defaults = { flip: false, turn: 0, camKey: '', key: '' } // turn: 0 | 90 | 180 | 270 degrees
+const defaults = { flip: false, turn: 0, camKey: '', key: '', brightness: null } // turn: 0 | 90 | 180 | 270 degrees
 export const camPrefs = {
   get: () => {
     try {
