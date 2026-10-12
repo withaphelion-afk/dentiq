@@ -36,6 +36,7 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
   const [tag, setTag] = useState(null)
   const [pending, setPending] = useState([]) // uploads in flight or failed: { key, url, blob, tooth, failed }
   const [flashing, setFlashing] = useState(false)
+  const [aspect, setAspect] = useState(4 / 3) // video width / height
   const [learning, setLearning] = useState(false)
   const [note, setNote] = useState('')
 
@@ -68,6 +69,7 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
         setTrack(vt)
         videoRef.current.srcObject = stream
         await videoRef.current.play().catch(() => {})
+        if (videoRef.current.videoHeight) setAspect(videoRef.current.videoWidth / videoRef.current.videoHeight)
         setPrefs(camPrefs.get()); setActive(pick.device); setStatus('live')
       } catch (e) { if (!cancelled) { setStatus('error'); setError(cameraError(e)) } }
     })()
@@ -117,14 +119,17 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
         e.preventDefault(); updatePrefs({ key: e.code }); setLearning(false); setNote(`Camera button saved: “${e.code}”`)
         return
       }
+      if (e.code === 'KeyR') { e.preventDefault(); updatePrefs({ turn: (prefs.turn + 90) % 360 }); return }
       if (e.code === 'Space' || (prefs.key && e.code === prefs.key)) { e.preventDefault(); shoot() }
     }
     addEventListener('keydown', onKey)
     return () => removeEventListener('keydown', onKey)
-  }, [open, status, learning, prefs.key, shoot])
+  }, [open, status, learning, prefs.key, prefs.turn, shoot])
 
   const label = active ? camName(active) : 'Intra-oral camera'
-  const transform = `${prefs.rotate ? 'rotate(180deg) ' : ''}${prefs.flip ? 'scaleX(-1)' : ''}`
+  // Quarter turns shrink the picture so it still fits the frame
+  const fit = prefs.turn % 180 ? Math.min(aspect, 1 / aspect) : 1
+  const transform = `rotate(${prefs.turn}deg) scale(${fit}) ${prefs.flip ? 'scaleX(-1)' : ''}`
 
   const changeTooth = async (photo, tooth) => { const p = await updatePhoto(photo.id, { tooth }).catch(() => null); if (p) onUpdate?.(p) }
   const remove = async (photo) => { try { await deletePhoto(photo.id); onRemove?.(photo.id) } catch { /* toast already shown */ } }
@@ -139,7 +144,7 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
         </button>
       ) : (
         <div className="space-y-2">
-          <div className="relative aspect-[4/3] max-h-[58vh] w-full overflow-hidden rounded-2xl bg-black">
+          <div className="relative max-h-[58vh] w-full overflow-hidden rounded-2xl bg-black" style={{ aspectRatio: aspect }}>
             <video ref={videoRef} playsInline muted autoPlay className="h-full w-full object-contain" style={{ transform }} />
             <div className={`pointer-events-none absolute inset-0 bg-[#ffffff] transition-opacity duration-150 ${flashing ? 'opacity-70' : 'opacity-0'}`} />
             {status === 'starting' && <div className="absolute inset-0 grid place-items-center text-sm text-[#ffffff]"><span><Loader2 className="mr-2 inline animate-spin" size={18} />Starting camera…</span></div>}
@@ -186,7 +191,7 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
               )}
               <button type="button" onClick={() => setChooser(true)} title="Choose which camera is the intra-oral one" className={`grid h-8 w-8 place-items-center rounded-lg ${onVideo}`}><SwitchCamera size={15} /></button>
               <button type="button" onClick={() => updatePrefs({ flip: !prefs.flip })} title="Mirror" aria-pressed={prefs.flip} className={`grid h-8 w-8 place-items-center rounded-lg ${onVideo} ${prefs.flip ? 'ring-2 ring-[#ffffff]' : ''}`}><FlipHorizontal2 size={15} /></button>
-              <button type="button" onClick={() => updatePrefs({ rotate: !prefs.rotate })} title="Turn upside down" aria-pressed={prefs.rotate} className={`grid h-8 w-8 place-items-center rounded-lg ${onVideo} ${prefs.rotate ? 'ring-2 ring-[#ffffff]' : ''}`}><RotateCw size={15} /></button>
+              <button type="button" onClick={() => updatePrefs({ turn: (prefs.turn + 90) % 360 })} title={`Turn 90° (R key). Now ${prefs.turn}°`} className={`relative grid h-8 w-8 place-items-center rounded-lg ${onVideo} ${prefs.turn ? 'ring-2 ring-[#ffffff]' : ''}`}><RotateCw size={15} />{prefs.turn > 0 && <span className="absolute -bottom-1 -right-1 rounded bg-[#ffffff] px-1 text-[9px] font-bold text-[#000000]">{prefs.turn}°</span>}</button>
               <button type="button" onClick={() => { setOpen(false); setLearning(false) }} title="Close camera" className={`grid h-8 w-8 place-items-center rounded-lg ${onVideo}`}><X size={15} /></button>
             </div>
             <button type="button" onClick={shoot} disabled={status !== 'live'} aria-label="Take photo"
@@ -199,7 +204,7 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
             <label className="flex items-center gap-2 font-semibold text-ink">Tag tooth
               <ToothSelect value={tag} onChange={setTag} teeth={teeth} className="h-8" />
             </label>
-            <span>Tap the shutter or press <b>Space</b></span>
+            <span>Shutter or <b>Space</b> takes a photo · <b>R</b> turns the picture</span>
             <button type="button" onClick={() => { setLearning((l) => !l); setNote('') }} className="font-bold underline underline-offset-2">
               {learning ? 'Now press the camera’s button… (Esc to cancel)' : prefs.key ? `Camera button: ${prefs.key} (change)` : 'Set camera button'}
             </button>

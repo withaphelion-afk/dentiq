@@ -4,9 +4,14 @@ const MAX_EDGE = 1600
 // Cameras that are part of the computer or software cameras: never chosen automatically
 const NOT_INTRAORAL = /truevision|integrated|built-?in|facetime|front|rear|back camera|laptop|ir camera|infrared|windows hello|virtual|obs|droidcam|snap camera|iriun|epoccam/i
 
-const defaults = { flip: false, rotate: false, camKey: '', key: '' }
+const defaults = { flip: false, turn: 0, camKey: '', key: '' } // turn: 0 | 90 | 180 | 270 degrees
 export const camPrefs = {
-  get: () => { try { return { ...defaults, ...JSON.parse(localStorage.getItem(KEY)) } } catch { return { ...defaults } } },
+  get: () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY)) || {}
+      return { ...defaults, ...saved, turn: saved.turn ?? (saved.rotate ? 180 : 0) } // older versions stored rotate: true
+    } catch { return { ...defaults } }
+  },
   set: (patch) => { try { localStorage.setItem(KEY, JSON.stringify({ ...camPrefs.get(), ...patch })) } catch { /* storage unavailable */ } },
 }
 
@@ -63,14 +68,15 @@ export async function openCamera(deviceId) {
 }
 
 // Current video frame → compressed JPEG (≈50–400 KB), applying the mirror / 180° settings
-export async function captureFrame(video, { flip, rotate }) {
+export async function captureFrame(video, { flip, turn = 0 }) {
   const scale = Math.min(1, MAX_EDGE / Math.max(video.videoWidth, video.videoHeight))
   const w = Math.round(video.videoWidth * scale), h = Math.round(video.videoHeight * scale)
   const canvas = document.createElement('canvas')
-  canvas.width = w; canvas.height = h
+  const sideways = turn % 180 !== 0
+  canvas.width = sideways ? h : w; canvas.height = sideways ? w : h
   const ctx = canvas.getContext('2d')
-  ctx.translate(w / 2, h / 2)
-  if (rotate) ctx.rotate(Math.PI)
+  ctx.translate(canvas.width / 2, canvas.height / 2)
+  if (turn) ctx.rotate((turn * Math.PI) / 180)
   if (flip) ctx.scale(-1, 1)
   ctx.drawImage(video, -w / 2, -h / 2, w, h)
   const toBlob = (q) => new Promise((res) => canvas.toBlob(res, 'image/jpeg', q))
