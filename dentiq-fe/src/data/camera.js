@@ -1,10 +1,12 @@
-// Intra-oral camera helpers: device choice, capture-to-JPEG, and remembered preferences (per computer)
+// Intra-oral camera helpers: strict device selection, capture-to-JPEG, and remembered preferences (per computer)
 const KEY = 'dentiq-camera'
 const MAX_EDGE = 1600
-const BUILT_IN = /truevision|integrated|built-?in|facetime|front|laptop|hd camera|webcam/i
+// Cameras that are part of the computer or software cameras: never chosen automatically
+const NOT_INTRAORAL = /truevision|integrated|built-?in|facetime|front|rear|back camera|laptop|ir camera|infrared|windows hello|virtual|obs|droidcam|snap camera|iriun|epoccam/i
 
+const defaults = { flip: false, rotate: false, camKey: '', key: '' }
 export const camPrefs = {
-  get: () => { try { return { flip: false, rotate: false, deviceId: '', key: '', ...JSON.parse(localStorage.getItem(KEY)) } } catch { return { flip: false, rotate: false, deviceId: '', key: '' } } },
+  get: () => { try { return { ...defaults, ...JSON.parse(localStorage.getItem(KEY)) } } catch { return { ...defaults } } },
   set: (patch) => { try { localStorage.setItem(KEY, JSON.stringify({ ...camPrefs.get(), ...patch })) } catch { /* storage unavailable */ } },
 }
 
@@ -13,23 +15,54 @@ export const cameraSupported = () => Boolean(navigator.mediaDevices?.getUserMedi
 export const cameraError = (e) => {
   const n = e?.name
   if (n === 'NotAllowedError' || n === 'SecurityError') return 'Camera access is blocked. Allow the camera for this site in Chrome (lock icon in the address bar) and in Windows → Settings → Privacy → Camera.'
-  if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'No camera found. Plug in the intra-oral camera and try again.'
-  if (n === 'NotReadableError' || n === 'AbortError') return 'The camera is busy. Close other apps using it (Camera app, another tab) and try again.'
+  if (n === 'NotReadableError' || n === 'AbortError') return 'The camera is busy. Close other apps using it (Camera app, another tab), then try again.'
   return 'Could not start the camera.'
 }
 
-// Start the preferred camera. Uses the saved device, else the first one that doesn't look like the laptop webcam.
-export async function startCamera(preferredId) {
-  const probe = await navigator.mediaDevices.getUserMedia({ video: true }) // grants permission so device names are readable
-  probe.getTracks().forEach((t) => t.stop())
-  const devices = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput')
-  const chosen = devices.find((d) => d.deviceId === preferredId) || devices.find((d) => !BUILT_IN.test(d.label)) || devices[0]
-  if (!chosen) throw Object.assign(new Error('none'), { name: 'NotFoundError' })
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: chosen.deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } } })
-  return { stream, devices, deviceId: chosen.deviceId }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const enumerate = async () => (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput')
+
+// Stable id for a camera across plugs/ports: Chrome puts the USB vendor:product id in the label, e.g. "USB2.0 PC CAMERA (1908:2311)"
+export const camKey = (d) => d.label.match(/\(([0-9a-f]{4}:[0-9a-f]{4})\)/i)?.[1]?.toLowerCase() || d.label
+export const camName = (d) => d.label.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/i, '') || 'Camera'
+
+// All cameras with readable names. Names stay hidden until the site has camera permission once.
+export async function listCameras() {
+  let devs = await enumerate()
+  if (!devs.length || devs.every((d) => !d.label)) {
+    const probe = await navigator.mediaDevices.getUserMedia({ video: true })
+    probe.getTracks().forEach((t) => t.stop())
+    await sleep(400) // let Windows release the device
+    devs = await enumerate()
+  }
+  return devs
 }
 
-// Current video frame → compressed JPEG (≈200–400 KB), applying the mirror / 180° settings
+// Strict choice: the camera saved as "intra-oral", else the only non-built-in camera. Never the laptop webcam by itself.
+export function pickIntraoral(devs, savedKey) {
+  const saved = savedKey && devs.find((d) => camKey(d) === savedKey)
+  if (saved) return { device: saved, reason: 'saved' }
+  const external = devs.filter((d) => !NOT_INTRAORAL.test(d.label))
+  if (savedKey) return { device: null, reason: 'missing' } // chosen camera is not plugged in right now
+  if (external.length === 1) return { device: external[0], reason: 'auto' }
+  return { device: null, reason: external.length ? 'choose' : 'missing' }
+}
+
+export async function openCamera(deviceId) {
+  let last
+  for (let i = 0; i < 3; i++) {
+    try {
+      return await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } } })
+    } catch (e) {
+      last = e
+      if (e.name !== 'NotReadableError' && e.name !== 'AbortError') break
+      await sleep(600)
+    }
+  }
+  throw last
+}
+
+// Current video frame → compressed JPEG (≈50–400 KB), applying the mirror / 180° settings
 export async function captureFrame(video, { flip, rotate }) {
   const scale = Math.min(1, MAX_EDGE / Math.max(video.videoWidth, video.videoHeight))
   const w = Math.round(video.videoWidth * scale), h = Math.round(video.videoHeight * scale)

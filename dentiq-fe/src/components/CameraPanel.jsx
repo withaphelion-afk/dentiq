@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Camera, X, FlipHorizontal2, RotateCw, SwitchCamera, Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import { Camera, X, FlipHorizontal2, RotateCw, SwitchCamera, Loader2, RefreshCw, Trash2, VideoOff } from 'lucide-react'
 import PhotoImage, { seedPhoto } from './PhotoImage'
 import { useStore } from '../data/store'
-import { ALL_TEETH, camPrefs, cameraError, cameraSupported, captureFrame, startCamera } from '../data/camera'
+import { ALL_TEETH, camKey, camName, camPrefs, cameraError, cameraSupported, captureFrame, listCameras, openCamera, pickIntraoral } from '../data/camera'
 
 const onVideo = 'bg-black/60 text-[#ffffff] backdrop-blur hover:bg-black/80'
 const typing = (t) => /INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable
@@ -24,9 +24,11 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
   const { uploadPhoto, updatePhoto, deletePhoto } = useStore()
   const videoRef = useRef(null)
   const [open, setOpen] = useState(false)
-  const [status, setStatus] = useState('starting') // starting | live | error
+  const [status, setStatus] = useState('starting') // starting | live | missing | choose | error
+  const [chooser, setChooser] = useState(false) // user asked to pick the camera
   const [error, setError] = useState('')
   const [devices, setDevices] = useState([])
+  const [active, setActive] = useState(null)
   const [prefs, setPrefs] = useState(camPrefs.get)
   const [restart, setRestart] = useState(0)
   const [tag, setTag] = useState(null)
@@ -40,7 +42,7 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
 
   const updatePrefs = (patch) => { camPrefs.set(patch); setPrefs((p) => ({ ...p, ...patch })) }
 
-  // Start / stop the camera while the panel is open
+  // Start / stop the camera while the panel is open. Only the camera chosen as "intra-oral" is ever opened.
   useEffect(() => {
     if (!open) return
     let cancelled = false, stream
@@ -48,17 +50,32 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
     ;(async () => {
       setStatus('starting'); setError('')
       try {
-        const r = await startCamera(camPrefs.get().deviceId)
-        stream = r.stream
+        const devs = await listCameras()
+        if (cancelled) return
+        setDevices(devs)
+        const pick = chooser ? { device: null, reason: 'choose' } : pickIntraoral(devs, camPrefs.get().camKey)
+        if (!pick.device) { setStatus(pick.reason); return }
+        stream = await openCamera(pick.device.deviceId)
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return }
+        if (pick.reason === 'auto') camPrefs.set({ camKey: camKey(pick.device) })
+        stream.getVideoTracks()[0].onended = () => setRestart((n) => n + 1) // unplugged
         videoRef.current.srcObject = stream
         await videoRef.current.play().catch(() => {})
-        camPrefs.set({ deviceId: r.deviceId })
-        setDevices(r.devices); setPrefs((p) => ({ ...p, deviceId: r.deviceId })); setStatus('live')
+        setPrefs(camPrefs.get()); setActive(pick.device); setStatus('live')
       } catch (e) { if (!cancelled) { setStatus('error'); setError(cameraError(e)) } }
     })()
     return () => { cancelled = true; stream?.getTracks().forEach((t) => t.stop()) }
-  }, [open, restart])
+  }, [open, restart, chooser])
+
+  // Plugging the camera in (or out) while the panel is open re-checks automatically
+  useEffect(() => {
+    if (!open) return
+    const onChange = () => { if (status !== 'live') setRestart((n) => n + 1) }
+    navigator.mediaDevices.addEventListener('devicechange', onChange)
+    return () => navigator.mediaDevices.removeEventListener('devicechange', onChange)
+  }, [open, status])
+
+  const choose = (d) => { camPrefs.set({ camKey: camKey(d) }); setChooser(false); setRestart((n) => n + 1) }
 
   const send = useCallback(async (item) => {
     try {
@@ -95,11 +112,7 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
     return () => removeEventListener('keydown', onKey)
   }, [open, status, learning, prefs.key, shoot])
 
-  const switchCamera = () => {
-    const i = devices.findIndex((d) => d.deviceId === prefs.deviceId)
-    updatePrefs({ deviceId: devices[(i + 1) % devices.length].deviceId }); setRestart((n) => n + 1)
-  }
-  const label = devices.find((d) => d.deviceId === prefs.deviceId)?.label || 'Camera'
+  const label = active ? camName(active) : 'Intra-oral camera'
   const transform = `${prefs.rotate ? 'rotate(180deg) ' : ''}${prefs.flip ? 'scaleX(-1)' : ''}`
 
   const changeTooth = async (photo, tooth) => { const p = await updatePhoto(photo.id, { tooth }).catch(() => null); if (p) onUpdate?.(p) }
@@ -127,9 +140,37 @@ export default function CameraPanel({ patient, teeth = [], photos, onAdd, onUpda
                 </div>
               </div>
             )}
+            {status === 'missing' && (
+              <div className="absolute inset-0 grid place-items-center overflow-y-auto p-6 text-center text-sm text-[#ffffff]">
+                <div className="max-w-sm">
+                  <VideoOff className="mx-auto mb-2" size={28} />
+                  <p className="font-bold">Intra-oral camera not found</p>
+                  <p className="mt-1 opacity-80">Plug it in and wait a few seconds. It connects automatically.</p>
+                  {devices.length > 0 && <p className="mt-3 text-xs opacity-60">Cameras seen by this computer: {devices.map(camName).join(', ')}</p>}
+                  <div className="mt-4 flex justify-center gap-2">
+                    <button type="button" onClick={() => setRestart((n) => n + 1)} className="rounded-lg bg-[#ffffff] px-3 py-2 font-bold text-[#000000]"><RefreshCw size={14} className="mr-1 inline" />Check again</button>
+                    {devices.length > 0 && <button type="button" onClick={() => setChooser(true)} className="rounded-lg border border-[#ffffff]/40 px-3 py-2 font-bold">Choose camera…</button>}
+                  </div>
+                </div>
+              </div>
+            )}
+            {status === 'choose' && (
+              <div className="absolute inset-0 overflow-y-auto p-5 text-sm text-[#ffffff]">
+                <p className="font-bold">Which one is the intra-oral camera?</p>
+                <p className="mb-3 text-xs opacity-70">Pick it once. Dentiq remembers it on this computer and never opens any other camera.</p>
+                <div className="space-y-2">
+                  {devices.map((d) => (
+                    <button key={d.deviceId} type="button" onClick={() => choose(d)} className="flex w-full items-center gap-3 rounded-xl border border-[#ffffff]/30 px-3 py-3 text-left hover:bg-[#ffffff]/10">
+                      <Camera size={18} /><span className="min-w-0 flex-1 truncate font-semibold">{camName(d)}</span>
+                    </button>
+                  ))}
+                </div>
+                {chooser && <button type="button" onClick={() => setChooser(false)} className="mt-3 text-xs font-bold underline">Cancel</button>}
+              </div>
+            )}
             <div className="absolute inset-x-2 top-2 flex items-center gap-1.5">
               <span className="min-w-0 flex-1 truncate rounded-lg bg-black/60 px-2 py-1 text-[11px] font-semibold text-[#ffffff]">{label}</span>
-              {devices.length > 1 && <button type="button" onClick={switchCamera} title="Switch camera" className={`grid h-8 w-8 place-items-center rounded-lg ${onVideo}`}><SwitchCamera size={15} /></button>}
+              <button type="button" onClick={() => setChooser(true)} title="Choose which camera is the intra-oral one" className={`grid h-8 w-8 place-items-center rounded-lg ${onVideo}`}><SwitchCamera size={15} /></button>
               <button type="button" onClick={() => updatePrefs({ flip: !prefs.flip })} title="Mirror" aria-pressed={prefs.flip} className={`grid h-8 w-8 place-items-center rounded-lg ${onVideo} ${prefs.flip ? 'ring-2 ring-[#ffffff]' : ''}`}><FlipHorizontal2 size={15} /></button>
               <button type="button" onClick={() => updatePrefs({ rotate: !prefs.rotate })} title="Turn upside down" aria-pressed={prefs.rotate} className={`grid h-8 w-8 place-items-center rounded-lg ${onVideo} ${prefs.rotate ? 'ring-2 ring-[#ffffff]' : ''}`}><RotateCw size={15} /></button>
               <button type="button" onClick={() => { setOpen(false); setLearning(false) }} title="Close camera" className={`grid h-8 w-8 place-items-center rounded-lg ${onVideo}`}><X size={15} /></button>
