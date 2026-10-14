@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit'
 import { z } from 'zod'
 import express from 'express'
 import { Appointment, Patient, Payment, Photo, User, Visit } from '../models/index.js'
-import { requireAuth, signToken } from '../middleware/auth.js'
+import { blockGuestWrites, requireAuth, signGuestToken, signToken } from '../middleware/auth.js'
 import { HttpError } from '../middleware/error.js'
 import { getSettings } from '../services/settings.js'
 import { collectDue, createVisit } from '../services/visits.js'
@@ -30,6 +30,11 @@ r.post('/auth/login', rateLimit({ windowMs: 15 * 60e3, limit: 20 }), async (req,
   res.json({ token: signToken(user) })
 })
 
+r.post('/auth/guest', rateLimit({ windowMs: 15 * 60e3, limit: 60 }), (_req, res) => {
+  if (!config.guestLogin) throw new HttpError(403, 'Guest login is turned off')
+  res.json({ token: signGuestToken() })
+})
+
 r.get('/health', (_req, res) => res.json({ ok: true }))
 
 // External scheduler (cron-job.org) calls this every ~15 min with `Authorization: Bearer <CRON_SECRET>`.
@@ -40,7 +45,7 @@ r.all('/cron/reminders', async (req, res) => {
   if (!config.cronSecret || !sameSecret(given, config.cronSecret)) throw new HttpError(401, 'Unauthorized')
   res.json(await runAutoReminders())
 })
-r.use(requireAuth)
+r.use(requireAuth, blockGuestWrites)
 
 // ---- Settings ----
 const settingsInput = z.object({

@@ -153,3 +153,16 @@ test('photos: upload, tag a tooth, attach to a visit, fetch, delete', async () =
   await api.get(`/api/photos/${photo.id}/file`).set(auth).expect(404)
   assert.equal((await api.get(`/api/photos?patientId=${patient.id}`).set(auth)).body.length, 0)
 })
+
+test('guest login is off by default, and guests are read-only when it is on', async () => {
+  await api.post('/api/auth/guest').expect(403)
+  config.guestLogin = true
+  try {
+    const { body } = await api.post('/api/auth/guest').expect(200)
+    const guest = { Authorization: `Bearer ${body.token}` }
+    await api.get('/api/patients').set(guest).expect(200)
+    await api.post('/api/patients').set(guest).send({ name: 'Nope Guest', phone: '9123456780' }).expect(403)
+    await api.put('/api/settings').set(guest).send({ clinicName: 'Hacked' }).expect(403)
+    await api.post('/api/reminders/appointment/anything').set(guest).send({}).expect(403)
+  } finally { config.guestLogin = false }
+})

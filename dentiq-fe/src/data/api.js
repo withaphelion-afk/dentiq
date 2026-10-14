@@ -17,6 +17,9 @@ export const tokenStore = {
   set: (t) => { try { if (t) localStorage.setItem(KEY, t); else localStorage.removeItem(KEY) } catch { /* storage unavailable */ } },
 }
 
+// Guest sessions are read-only (the server enforces it; the UI uses this to skip write forms)
+export const isGuestToken = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role === 'guest' } catch { return false } }
+
 export class ApiError extends Error {
   constructor(status, message) { super(message); this.status = status }
 }

@@ -9,6 +9,7 @@ export const config = {
   doctorPassword: env.DOCTOR_PASSWORD || 'dentiq',
   clientOrigin: (env.CLIENT_ORIGIN || 'http://localhost:5173').split(','),
   tz: env.TZ_NAME || 'Asia/Kolkata',
+  guestLogin: env.GUEST_LOGIN === 'true', // opt-in: lets anyone open a read-only session
   cronSecret: env.CRON_SECRET,
   blobToken: env.BLOB_READ_WRITE_TOKEN,
   uploadDir: env.UPLOAD_DIR || new URL('../.uploads', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'),

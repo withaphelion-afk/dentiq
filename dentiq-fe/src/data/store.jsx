@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { api, tokenExpiry, tokenStore } from './api'
+import { api, isGuestToken, tokenExpiry, tokenStore } from './api'
 import { addDays, isoDay } from './format'
 
 // App state backed by the Dentiq API. Every mutation calls the server, then refreshes what it touched.
@@ -60,6 +60,13 @@ export function StoreProvider({ children }) {
     call(() => refresh()).then(() => live && setReady(true)).catch(() => {})
     return () => { live = false }
   }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const guest = Boolean(token) && isGuestToken(token)
+  const loginAsGuest = async () => {
+    const { token: t } = await api.post('/auth/guest')
+    tokenStore.set(t)
+    setToken(t)
+  }
 
   const login = async (password) => {
     const { token: t } = await api.post('/auth/login', { password })
@@ -129,7 +136,7 @@ export function StoreProvider({ children }) {
   }
 
   const value = {
-    token, ready, login, logout, flash, toast,
+    token, ready, guest, login, loginAsGuest, logout, flash, toast,
     settings, patients, appointments, queue, payments, collected, reminders, treatments, today,
     patientById, searchPatients, findByPhone, ...actions,
   }

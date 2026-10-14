@@ -23,7 +23,7 @@ const prefs = {
 }
 
 export default function App() {
-  const { token, ready, toast, flash, patientById, appointments } = useStore()
+  const { token, ready, toast, flash, guest, patientById, appointments } = useStore()
   const [booting, setBooting] = useState(() => !splashSeen.get())
   const endSplash = useCallback(() => { splashSeen.set(); setBooting(false) }, [])
   // The page lives in the address bar, so refresh and the back button keep you where you were
@@ -67,10 +67,12 @@ export default function App() {
   useEffect(() => startAutoUpdate(() => safe.current), [])
   useEffect(() => { if (justUpdated()) flash('Dentiq updated to the latest version') }, [flash])
 
-  const newVisit = (patient) => setSheet({ type: 'visit', patient })
-  const newPatient = (prefill = '') => setSheet({ type: 'patient', prefill })
-  const book = (patient, date) => setSheet({ type: 'book', patient, date })
-  const reschedule = (appointment) => setSheet({ type: 'book', appointment })
+  // Guests can browse but not add or change anything
+  const open = (s) => (guest ? flash('Guest access is read-only') : setSheet(s))
+  const newVisit = (patient) => open({ type: 'visit', patient })
+  const newPatient = (prefill = '') => open({ type: 'patient', prefill })
+  const book = (patient, date) => open({ type: 'book', patient, date })
+  const reschedule = (appointment) => open({ type: 'book', appointment })
   const openProfile = (p) => navigate('patients', p.id)
   const go = (id) => navigate(id)
 

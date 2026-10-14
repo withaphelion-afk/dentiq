@@ -5,7 +5,7 @@ import { inputCls, PrimaryBtn } from '../components/Sheet'
 import { useStore } from '../data/store'
 
 export default function Login() {
-  const { login } = useStore()
+  const { login, loginAsGuest } = useStore()
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -14,6 +14,11 @@ export default function Login() {
     e.preventDefault()
     setBusy(true); setError('')
     try { await login(password) } catch (err) { setError(err.message); setBusy(false) }
+  }
+
+  const guest = async () => {
+    setBusy(true); setError('')
+    try { await loginAsGuest() } catch (err) { setError(err.message); setBusy(false) }
   }
 
   return (
@@ -28,6 +33,7 @@ export default function Login() {
         </label>
         {error && <p className="mt-2 text-sm font-semibold text-rose-600 dark:text-rose-300">{error}</p>}
         <PrimaryBtn type="submit" disabled={!password || busy} className="mt-4 w-full">{busy ? 'Signing in…' : 'Sign in'}</PrimaryBtn>
+        <button type="button" onClick={guest} disabled={busy} className="mt-3 w-full rounded-xl py-2.5 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50">Continue as guest (view only)</button>
       </form>
     </div>
   )

@@ -72,9 +72,10 @@ function Queue({ onOpen }) {
 
 // Tomorrow's appointment reminders + recalls. Auto-sent if WhatsApp Cloud API is set up, otherwise one tap each.
 function Reminders() {
-  const { reminders, markReminder, flash } = useStore()
+  const { reminders, markReminder, flash, guest } = useStore()
   const { items, auto, sendAt } = reminders
   const send = (r) => {
+    if (guest) return flash('Guest access is read-only')
     window.open(r.link, '_blank', 'noopener')
     markReminder(r.kind, r.id).then(() => flash(`Reminder sent to ${r.patient.name.split(' ')[0]}`)).catch(() => {})
   }
